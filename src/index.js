@@ -28,7 +28,9 @@ client.on("warn", (msg) => console.warn("client warn:", msg));
 client.commands = new Collection();
 client.commands.set(ping.data.name, ping);
 
-client.once("clientReady", () => ready(client));
+// ✅ TO JEST KLUCZ:
+client.once("ready", () => ready(client));
+
 client.on("interactionCreate", (i) => interactionCreate(client, i));
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
