@@ -29,7 +29,8 @@ client.commands = new Collection();
 client.commands.set(ping.data.name, ping);
 
 // ✅ TO JEST KLUCZ:
-client.once("ready", () => ready(client));
+client.once("clientReady", () => ready(client));
+
 
 client.on("interactionCreate", (i) => interactionCreate(client, i));
 client.on("interactionCreate", (i) => {

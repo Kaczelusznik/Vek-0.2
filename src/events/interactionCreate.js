@@ -1,20 +1,20 @@
 module.exports = async (client, interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const cmd = client.commands.get(interaction.commandName);
-  if (!cmd) return;
-
   try {
+    if (!interaction.isChatInputCommand()) return;
+
+    const cmd = client.commands.get(interaction.commandName);
+    if (!cmd) return;
+
     await cmd.execute(interaction);
   } catch (err) {
-    console.error(err);
+    console.error("interactionCreate error:", err);
 
-    const msg = { content: "Coś się wysypało.", ephemeral: true };
+    const msg = { content: "Błąd przy wykonaniu komendy.", ephemeral: true };
 
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(msg);
+    if (interaction.deferred || interaction.replied) {
+      await interaction.followUp(msg).catch(() => {});
     } else {
-      await interaction.reply(msg);
+      await interaction.reply(msg).catch(() => {});
     }
   }
 };

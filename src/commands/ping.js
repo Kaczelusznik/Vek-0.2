@@ -6,6 +6,6 @@ module.exports = {
     .setDescription("Sprawdza czy bot żyje"),
 
   async execute(interaction) {
-    await interaction.reply("pong");
+    await interaction.reply(`Pong! ${interaction.client.ws.ping}ms`);
   },
 };
