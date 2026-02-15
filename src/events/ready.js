@@ -7,7 +7,7 @@ module.exports = (client) => {
   client.user.setPresence({
     activities: [
       {
-        name: "I <3 Nezet | /help",
+        name: "Składa nezecki taboret",
         type: 1, // Playing
       },
     ],
