@@ -1,3 +1,4 @@
+// src/index.js
 require("dotenv").config();
 
 const fs = require("fs");
@@ -47,7 +48,7 @@ const eventFiles = fs.existsSync(eventsPath)
   : [];
 
 for (const file of eventFiles) {
-  const eventName = path.parse(file).name; // ready, interactionCreate, itp.
+  const eventName = path.parse(file).name; // np. clientReady, interactionCreate
   const handler = require(path.join(eventsPath, file));
 
   if (typeof handler !== "function") {
@@ -55,8 +56,8 @@ for (const file of eventFiles) {
     continue;
   }
 
-  if (eventName === "ready") {
-    client.once("ready", (...args) => handler(client, ...args));
+  if (eventName === "clientReady") {
+    client.once("clientReady", (...args) => handler(client, ...args));
     console.log("[events] Bound once:", eventName);
   } else {
     client.on(eventName, (...args) => handler(client, ...args));

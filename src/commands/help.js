@@ -1,5 +1,5 @@
 // src/commands/help.js
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,7 +22,6 @@ module.exports = {
   async execute(interaction) {
     const cat = interaction.options.getString("kategoria");
 
-    // Wystarczy, że w przyszłości dopiszesz tu jedną linijkę — embed buduje się z tej listy.
     const COMMANDS = {
       general: [
         { cmd: "/help [kategoria]", desc: "Pokazuje listę komend." },
@@ -66,15 +65,27 @@ module.exports = {
       .setFooter({ text: "VEK 0.2 • bot serwerowy (ekonomia + levele + roll)" })
       .setTimestamp();
 
-    // Jeśli użytkownik poda kategorię — pokaż tylko tę.
+    const replyOpts = { embeds: [embed], flags: MessageFlags.Ephemeral };
+
     if (cat && COMMANDS[cat]) {
-      const lines = COMMANDS[cat].map((x) => `• **${x.cmd}** — ${x.desc}`).join("\n");
-      embed.addFields({ name: titles[cat], value: lines || "Brak komend.", inline: false });
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      const lines = COMMANDS[cat]
+        .map((x) => `• **${x.cmd}** — ${x.desc}`)
+        .join("\n");
+
+      embed.addFields({
+        name: titles[cat],
+        value: lines || "Brak komend.",
+        inline: false,
+      });
+
+      return interaction.reply(replyOpts);
     }
 
-    // Jeśli nie poda kategorii — pokaż skrót (po 2–3 najważniejsze z każdej).
-    const preview = (arr, n = 3) => arr.slice(0, n).map((x) => `• **${x.cmd}** — ${x.desc}`).join("\n");
+    const preview = (arr, n = 3) =>
+      arr
+        .slice(0, n)
+        .map((x) => `• **${x.cmd}** — ${x.desc}`)
+        .join("\n");
 
     embed.addFields(
       { name: titles.general, value: preview(COMMANDS.general, 2), inline: false },
@@ -84,6 +95,6 @@ module.exports = {
       { name: titles.admin, value: "Tylko dla administracji serwera.", inline: false }
     );
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply(replyOpts);
   },
 };
