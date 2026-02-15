@@ -12,28 +12,27 @@ function hasAllowedRole(interaction) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addmoney')
-    .setDescription('Dodaj monety graczowi (Moderator/MG/Admin/Imperator)')
-    .addUserOption((opt) =>
+    .setDescription('Dodaj monety graczowi')
+    .addUserOption(opt =>
       opt.setName('gracz').setDescription('Komu dodać?').setRequired(true)
     )
-    .addIntegerOption((opt) =>
+    .addIntegerOption(opt =>
       opt.setName('kwota').setDescription('Ile dodać?').setRequired(true).setMinValue(1)
     ),
 
   async execute(interaction) {
     if (!hasAllowedRole(interaction)) {
       return interaction.editReply({
-        content: 'Nie masz uprawnień. Wymagana rola: Moderator / Mistrz Gry / Administrator / Imperator.',
+        content: 'Nie masz uprawnień.',
       });
     }
 
     const target = interaction.options.getUser('gracz', true);
     const amount = interaction.options.getInteger('kwota', true);
-
     const guildId = interaction.guildId;
 
     try {
-      const newBal = addMoney(guildId, target.id, amount);
+      const newBal = await addMoney(guildId, target.id, amount);
       const prevBal = newBal - amount;
 
       return interaction.editReply({
@@ -42,7 +41,7 @@ module.exports = {
       });
     } catch (err) {
       return interaction.editReply({
-        content: `Błąd: ${err?.message ? err.message : String(err)}`,
+        content: `Błąd: ${err.message}`,
       });
     }
   },

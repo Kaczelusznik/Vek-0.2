@@ -12,39 +12,37 @@ function hasAllowedRole(interaction) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('removemoney')
-    .setDescription('Zabierz monety graczowi (Moderator/MG/Admin/Imperator)')
-    .addUserOption((opt) =>
+    .setDescription('Zabierz monety graczowi')
+    .addUserOption(opt =>
       opt.setName('gracz').setDescription('Komu zabrać?').setRequired(true)
     )
-    .addIntegerOption((opt) =>
+    .addIntegerOption(opt =>
       opt.setName('kwota').setDescription('Ile zabrać?').setRequired(true).setMinValue(1)
     )
-    .addBooleanOption((opt) =>
-      opt
-        .setName('moze_ujemne')
-        .setDescription('Czy saldo może spaść poniżej 0? (domyślnie NIE)')
+    .addBooleanOption(opt =>
+      opt.setName('moze_ujemne')
+        .setDescription('Czy saldo może spaść poniżej 0?')
         .setRequired(false)
     ),
 
   async execute(interaction) {
     if (!hasAllowedRole(interaction)) {
       return interaction.editReply({
-        content: 'Nie masz uprawnień. Wymagana rola: Moderator / Mistrz Gry / Administrator / Imperator.',
+        content: 'Nie masz uprawnień.',
       });
     }
 
     const target = interaction.options.getUser('gracz', true);
     const amount = interaction.options.getInteger('kwota', true);
     const allowNegative = interaction.options.getBoolean('moze_ujemne') ?? false;
-
     const guildId = interaction.guildId;
 
     try {
-      const res = removeMoney(guildId, target.id, amount, { allowNegative });
+      const res = await removeMoney(guildId, target.id, amount, { allowNegative });
 
       if (!res.ok) {
         return interaction.editReply({
-          content: `${target} ma tylko **${res.current}** monet. Nie mogę zabrać **${amount}** (saldo nie może być ujemne).`,
+          content: `${target} ma tylko **${res.current}** monet.`,
           allowedMentions: { users: [target.id] },
         });
       }
@@ -55,7 +53,7 @@ module.exports = {
       });
     } catch (err) {
       return interaction.editReply({
-        content: `Błąd: ${err?.message ? err.message : String(err)}`,
+        content: `Błąd: ${err.message}`,
       });
     }
   },
