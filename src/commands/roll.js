@@ -31,7 +31,7 @@ function parseDiceExpr(input) {
   if (sides < 2 || sides > 1000) {
     return { ok: false, error: "Kość 2–1000 ścian." };
   }
-
+ 
   let operator = null;
   let modifierValue = 0;
 
