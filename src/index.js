@@ -24,6 +24,9 @@ const client = new Client({
 
 client.on("error", (err) => console.error("client error:", err));
 client.on("warn", (msg) => console.warn("client warn:", msg));
+client.on("interactionCreate", (i) => {
+  console.log("INTERACTION HIT:", i.type, i.isChatInputCommand?.(), i.commandName);
+});
 
 client.commands = new Collection();
 client.commands.set(ping.data.name, ping);
