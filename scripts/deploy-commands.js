@@ -5,7 +5,7 @@ const { SlashCommandBuilder } = require("discord.js");
 const commands = [
   new SlashCommandBuilder()
     .setName("ping")
-    .setDescription("Sprawdza czy bot żyje")
+    .setDescription("PING TEST 123")
     .toJSON(),
 ];
 

@@ -39,6 +39,7 @@ client.on("interactionCreate", (i) => {
 
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  console.log("ENV CLIENT_ID:", process.env.CLIENT_ID);
   console.error("LOGIN FAILED:", err);
   process.exit(1);
 });
