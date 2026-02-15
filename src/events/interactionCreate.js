@@ -1,35 +1,26 @@
+// src/events/interactionCreate.js
 module.exports = async (client, interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
 
-    const cmd = client.commands.get(interaction.commandName);
-    if (!cmd) {
-      return interaction.reply({
-        content: 'Brak handlera dla tej komendy.',
-        ephemeral: true
-      });
-    }
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
 
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false });
-    }
-
-    await cmd.execute(interaction);
-
+    await command.execute(interaction);
   } catch (err) {
-    console.error('interactionCreate error:', err);
+    console.error("interactionCreate error:", err);
 
-    if (interaction.deferred && !interaction.replied) {
-      return interaction.editReply({
-        content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.'
+    // Jeśli komenda już odpowiedziała albo zrobiła defer — nie wolno reply drugi raz
+    if (interaction.deferred || interaction.replied) {
+      return interaction.followUp({
+        content: "❌ Wystąpił błąd podczas wykonywania komendy.",
+        flags: 64, // ephemeral
       });
     }
 
-    if (!interaction.replied) {
-      return interaction.reply({
-        content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.',
-        ephemeral: true
-      });
-    }
+    return interaction.reply({
+      content: "❌ Wystąpił błąd podczas wykonywania komendy.",
+      flags: 64, // ephemeral
+    });
   }
 };
