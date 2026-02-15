@@ -32,6 +32,10 @@ client.commands.set(ping.data.name, ping);
 client.once("ready", () => ready(client));
 
 client.on("interactionCreate", (i) => interactionCreate(client, i));
+client.on("interactionCreate", (i) => {
+  console.log("INTERACTION:", i.commandName);
+});
+
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
   console.error("LOGIN FAILED:", err);
