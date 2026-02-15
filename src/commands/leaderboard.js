@@ -26,7 +26,7 @@ module.exports = {
         : 'Brak danych. Użyj /addmoney aby komuś dodać monety.';
 
       const embed = new EmbedBuilder()
-        .setTitle('🏆 Leaderboard — monety')
+        .setTitle('🏆 Leaderboard - monety')
         .setDescription(lines)
         .setFooter({ text: `VEK 0.2 • Top ${limit}` })
         .setTimestamp(new Date());

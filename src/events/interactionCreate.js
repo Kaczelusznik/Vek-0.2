@@ -3,18 +3,33 @@ module.exports = async (client, interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     const cmd = client.commands.get(interaction.commandName);
-    if (!cmd) return;
+    if (!cmd) {
+      return interaction.reply({
+        content: 'Brak handlera dla tej komendy.',
+        ephemeral: true
+      });
+    }
+
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: false });
+    }
 
     await cmd.execute(interaction);
+
   } catch (err) {
-    console.error("interactionCreate error:", err);
+    console.error('interactionCreate error:', err);
 
-    const msg = { content: "Błąd przy wykonaniu komendy.", ephemeral: true };
+    if (interaction.deferred && !interaction.replied) {
+      return interaction.editReply({
+        content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.'
+      });
+    }
 
-    if (interaction.deferred || interaction.replied) {
-      await interaction.followUp(msg).catch(() => {});
-    } else {
-      await interaction.reply(msg).catch(() => {});
+    if (!interaction.replied) {
+      return interaction.reply({
+        content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.',
+        ephemeral: true
+      });
     }
   }
 };

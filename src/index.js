@@ -18,38 +18,6 @@ const client = new Client({
 
 client.on("error", (err) => console.error("client error:", err));
 client.on("warn", (msg) => console.warn("client warn:", msg));
-client.on('interactionCreate', async (interaction) => {
-  try {
-    if (!interaction.isChatInputCommand()) return;
-
-    const cmd = client.commands.get(interaction.commandName);
-    if (!cmd) {
-      return interaction.reply({ content: 'Brak handlera dla tej komendy.', ephemeral: true });
-    }
-
-    // daje Ci czas na DB / logikę, nie będzie "nie reaguje"
-    if (!interaction.deferred && !interaction.replied) {
-      await interaction.deferReply({ ephemeral: false });
-    }
-
-    await cmd.execute(interaction);
-  } catch (err) {
-    console.error('interactionCreate error:', err);
-
-    // jeśli już było deferReply, kończymy editReply
-    if (interaction.deferred && !interaction.replied) {
-      return interaction.editReply({ content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.' });
-    }
-
-    // jeśli jeszcze nie odpowiedział
-    if (!interaction.replied) {
-      return interaction.reply({ content: 'Wewnętrzny błąd bota. Sprawdź logi w konsoli.', ephemeral: true });
-    }
-  }
-});
-
-
-
 
 /* ===== KOMENDY: src/commands/*.js ===== */
 client.commands = new Collection();
