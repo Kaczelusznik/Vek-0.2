@@ -8,6 +8,7 @@ module.exports = async (client, interaction) => {
     await cmd.execute(interaction);
   } catch (err) {
     console.error(err);
+
     const msg = { content: "Coś się wysypało.", ephemeral: true };
 
     if (interaction.replied || interaction.deferred) {
