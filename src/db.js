@@ -1,7 +1,14 @@
 const path = require('path');
+const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const db = new Database(path.join(process.cwd(), 'data.sqlite'));
+const dataDir = path.join(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const dbPath = path.join(dataDir, 'vek.sqlite');
+const db = new Database(dbPath);
+
+db.pragma('journal_mode = WAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS economy (
@@ -13,15 +20,15 @@ db.exec(`
 `);
 
 const stmtGet = db.prepare(`SELECT balance FROM economy WHERE guild_id=? AND user_id=?`);
-const stmtUpsert = db.prepare(`
-  INSERT INTO economy (guild_id, user_id, balance)
-  VALUES (?, ?, ?)
-  ON CONFLICT(guild_id, user_id) DO UPDATE SET balance=excluded.balance
-`);
 const stmtInc = db.prepare(`
   INSERT INTO economy (guild_id, user_id, balance)
   VALUES (?, ?, ?)
   ON CONFLICT(guild_id, user_id) DO UPDATE SET balance = balance + excluded.balance
+`);
+const stmtSet = db.prepare(`
+  INSERT INTO economy (guild_id, user_id, balance)
+  VALUES (?, ?, ?)
+  ON CONFLICT(guild_id, user_id) DO UPDATE SET balance = excluded.balance
 `);
 const stmtTop = db.prepare(`
   SELECT user_id, balance
@@ -37,17 +44,24 @@ function getBalance(guildId, userId) {
 }
 
 function addMoney(guildId, userId, amount) {
-  if (!Number.isInteger(amount)) throw new Error('amount must be int');
+  if (!Number.isInteger(amount)) throw new Error('Kwota musi być liczbą całkowitą.');
+  if (amount <= 0) throw new Error('Kwota musi być > 0.');
   stmtInc.run(guildId, userId, amount);
   return getBalance(guildId, userId);
 }
 
 function removeMoney(guildId, userId, amount, { allowNegative = false } = {}) {
-  if (!Number.isInteger(amount)) throw new Error('amount must be int');
+  if (!Number.isInteger(amount)) throw new Error('Kwota musi być liczbą całkowitą.');
+  if (amount <= 0) throw new Error('Kwota musi być > 0.');
+
   const current = getBalance(guildId, userId);
   const next = current - amount;
-  if (!allowNegative && next < 0) return { ok: false, current, next: current };
-  stmtUpsert.run(guildId, userId, next);
+
+  if (!allowNegative && next < 0) {
+    return { ok: false, current, next: current };
+  }
+
+  stmtSet.run(guildId, userId, next);
   return { ok: true, current, next };
 }
 
