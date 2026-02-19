@@ -1,58 +1,62 @@
 // src/commands/botinfo.js
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const os = require("os");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("botinfo")
-    .setDescription("Informacje o bocie VEK 0.2"),
+    .setDescription("Informacje techniczne o bocie VEK 0.2"),
 
   async execute(interaction) {
     const client = interaction.client;
 
-    const uptime = process.uptime(); // sekundy
+    // === UPTIME ===
+    const uptime = process.uptime();
     const days = Math.floor(uptime / 86400);
     const hours = Math.floor((uptime % 86400) / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
     const seconds = Math.floor(uptime % 60);
 
+    // === RAM ===
+    const usedMemory = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
+
+    // === EMBED ===
     const embed = new EmbedBuilder()
-      .setTitle("VEK 0.2 — Informacje")
-      .setColor(0x2b2d31)
+      .setTitle("⚙️ VEK 0.2 — Status Systemu")
+      .setColor(0x5e17eb)
       .addFields(
         {
-          name: "📦 Wersja",
-          value: "VEK 0.2",
+          name: "🧠 System",
+          value:
+            `Node.js: ${process.version}\n` +
+            `RAM: ${usedMemory} MB\n` +
+            `Platforma: ${os.platform()}`,
           inline: true,
         },
         {
-          name: "📡 Ping",
-          value: `${client.ws.ping} ms`,
+          name: "📡 Połączenie",
+          value:
+            `Ping: ${client.ws.ping} ms\n` +
+            `Shard: ${client.shard?.ids[0] ?? 0}`,
+          inline: true,
+        },
+        {
+          name: "🌍 Statystyki",
+          value:
+            `Serwery: ${client.guilds.cache.size}\n` +
+            `Użytkownicy: ${client.users.cache.size}\n` +
+            `Kanały: ${client.channels.cache.size}`,
           inline: true,
         },
         {
           name: "⏱ Uptime",
           value: `${days}d ${hours}h ${minutes}m ${seconds}s`,
-          inline: true,
-        },
-        {
-          name: "🌍 Serwery",
-          value: `${client.guilds.cache.size}`,
-          inline: true,
-        },
-        {
-          name: "👥 Użytkownicy",
-          value: `${client.users.cache.size}`,
-          inline: true,
-        },
-        {
-          name: "🖥 Node.js",
-          value: `${process.version}`,
-          inline: true,
+          inline: false,
         }
       )
-      .setFooter({ text: "Bot serwerowy • Ekonomia • Levele • Roll" })
+      .setFooter({ text: "VEK • System ekonomii • Roll • Poziomy" })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: false });
+    await interaction.reply({ embeds: [embed] });
   },
 };
