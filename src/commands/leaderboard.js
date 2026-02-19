@@ -8,26 +8,26 @@ module.exports = {
     .addIntegerOption(opt =>
       opt.setName('limit')
         .setDescription('Ile pozycji? (1-20)')
-        .setRequired(false)
         .setMinValue(1)
         .setMaxValue(20)
     ),
 
   async execute(interaction) {
-    const limit = interaction.options.getInteger('limit') ?? 10;
-    const guildId = interaction.guildId;
-
     try {
-      const rows = await topBalances(guildId, limit);
-
-      const lines = rows.length
-        ? rows.map((r, i) => `**${i + 1}.** <@${r.user_id}> — **${r.balance}** 💰`).join('\n')
-        : 'Brak danych.';
+      const limit = interaction.options.getInteger('limit') ?? 10;
+      const rows = await topBalances(interaction.guildId, limit);
 
       const embed = new EmbedBuilder()
         .setTitle('🏆 Leaderboard - monety')
-        .setDescription(lines)
-        .setFooter({ text: `VEK 0.2 • Top ${limit}` })
+        .setColor(0x20bd4a)
+        .setDescription(
+          rows.length
+            ? rows.map((r, i) =>
+                `**${i + 1}.** <@${r.user_id}> — **${r.balance}** 💰`
+              ).join('\n')
+            : 'Brak danych.'
+        )
+        .setFooter({ text: `Jo nie wiedzioł, że tok dobrze wom idzie` })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });

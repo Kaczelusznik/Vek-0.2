@@ -9,18 +9,8 @@ module.exports = {
 
   async execute(interaction) {
     const client = interaction.client;
-
-    // === UPTIME ===
     const uptime = process.uptime();
-    const days = Math.floor(uptime / 86400);
-    const hours = Math.floor((uptime % 86400) / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
 
-    // === RAM ===
-    const usedMemory = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
-
-    // === EMBED ===
     const embed = new EmbedBuilder()
       .setTitle("⚙️ VEK 0.2 — Status Systemu")
       .setColor(0x5e17eb)
@@ -29,7 +19,7 @@ module.exports = {
           name: "🧠 System",
           value:
             `Node.js: ${process.version}\n` +
-            `RAM: ${usedMemory} MB\n` +
+            `RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB\n` +
             `Platforma: ${os.platform()}`,
           inline: true,
         },
@@ -50,7 +40,11 @@ module.exports = {
         },
         {
           name: "⏱ Uptime",
-          value: `${days}d ${hours}h ${minutes}m ${seconds}s`,
+          value: `${Math.floor(uptime / 86400)}d ${
+            Math.floor((uptime % 86400) / 3600)
+          }h ${Math.floor((uptime % 3600) / 60)}m ${
+            Math.floor(uptime % 60)
+          }s`,
           inline: false,
         }
       )

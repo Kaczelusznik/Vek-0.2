@@ -1,44 +1,45 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { addMoney } = require('../db');
 
-const ALLOWED_ROLES = ['【♔ Moderator ♔ 】', '【 ♘ Mistrz Gry ♘】', '【♕ Administrator ♕】', 'Imperator'];
-
-function hasAllowedRole(interaction) {
-  const member = interaction.member;
-  if (!member || !member.roles) return false;
-  return member.roles.cache.some((role) => ALLOWED_ROLES.includes(role.name));
-}
+const ALLOWED_ROLES = [
+  '【♔ Moderator ♔ 】',
+  '【 ♘ Mistrz Gry ♘】',
+  '【♕ Administrator ♕】',
+  'Imperator'
+];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addmoney')
     .setDescription('Dodaj monety graczowi')
     .addUserOption(opt =>
-      opt.setName('gracz').setDescription('Komu dodać?').setRequired(true)
+      opt.setName('gracz')
+        .setDescription('Komu dodać?')
+        .setRequired(true)
     )
     .addIntegerOption(opt =>
-      opt.setName('kwota').setDescription('Ile dodać?').setRequired(true).setMinValue(1)
+      opt.setName('kwota')
+        .setDescription('Ile dodać?')
+        .setMinValue(1)
+        .setRequired(true)
     ),
 
   async execute(interaction) {
-    if (!hasAllowedRole(interaction)) {
-      return interaction.editReply({
-        content: 'Nie masz uprawnień.',
-      });
+    if (!interaction.member?.roles?.cache.some(r => ALLOWED_ROLES.includes(r.name))) {
+      return interaction.editReply({ content: 'Nie masz uprawnień.' });
     }
 
-    const target = interaction.options.getUser('gracz', true);
-    const amount = interaction.options.getInteger('kwota', true);
-    const guildId = interaction.guildId;
-
     try {
-      const newBal = await addMoney(guildId, target.id, amount);
-      const prevBal = newBal - amount;
+      const target = interaction.options.getUser('gracz', true);
+      const amount = interaction.options.getInteger('kwota', true);
+
+      const newBal = await addMoney(interaction.guildId, target.id, amount);
 
       return interaction.editReply({
-        content: `Dodano **${amount}** monet dla ${target}. Saldo: **${prevBal} → ${newBal}**`,
+        content: `Dodano **${amount}** monet dla ${target}. Saldo: **${newBal - amount} → ${newBal}**`,
         allowedMentions: { users: [target.id] },
       });
+
     } catch (err) {
       return interaction.editReply({
         content: `Błąd: ${err.message}`,

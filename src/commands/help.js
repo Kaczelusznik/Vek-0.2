@@ -10,7 +10,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle("📖 VEK 0.2 — Komendy")
       .setDescription(
-        "Poniżej masz pełną listę komend podzieloną na kategorie.\n" +
+        "Poniżej znajduje się pełna lista komend podzielona na kategorie.\n" +
           "Niektóre komendy mogą wymagać uprawnień (np. admin)."
       )
       .addFields(
@@ -31,16 +31,16 @@ module.exports = {
         {
           name: "👤 Profil / Level",
           value:
-            "• `/profil [user]` — profil (saldo, level, exp)\n" +
-            "• `/balance` — twoje saldo\n" +
-            "• `/balance [user]` — saldo użytkownika",
+            "• `/profil [user]` — profil (saldo, level, exp)\n",
           inline: false,
         },
         {
           name: "💸 Ekonomia",
           value:
-            "• `/transfer user kwota` — przelew do gracza\n" +
-            "• `/leaderboard` — ranking graczy",
+            "• `/transfer user kwota user` — przelew od gracza do gracza\n" +
+            "• `/leaderboard` — ranking graczy" +
+            "• `/balance` — twoje saldo\n" +
+            "• `/balance [user]` — saldo użytkownika",
           inline: false,
         },
         {
