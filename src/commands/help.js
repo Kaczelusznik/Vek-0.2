@@ -24,15 +24,19 @@ module.exports = {
 
     const COMMANDS = {
       general: [
+        { cmd: "/ping", desc: "Sprawdza czy bot działa" },
         { cmd: "/help [kategoria]", desc: "Pokazuje listę komend." },
         { cmd: "/botinfo", desc: "Info o bocie (wersja, uptime, ping)." },
       ],
       profile: [
         { cmd: "/profil [user]", desc: "Twój profil: saldo, level, exp." },
-        { cmd: "/balance [user]", desc: "Szybkie saldo (bez profilu)." },
+        { cmd: "/balance", desc: "Sprawdzenie salda" },
+        { cmd: "/balance [user]", desc: "Saldo wybranego użytkownika." },
       ],
       economy: [
+        { cmd: "/transfer", desc: "Przekazanie waluty" },
         { cmd: "/transfer user kwota", desc: "Przelej kasę innemu graczowi." },
+        { cmd: "/leaderboard", desc: "Ranking graczy" },
       ],
       info: [
         { cmd: "/avatar [user]", desc: "Wyświetla avatar użytkownika." },
@@ -56,6 +60,12 @@ module.exports = {
       admin: "🛡 Admin",
     };
 
+    const makeTable = (rows) => {
+      const header = "| Komenda | Opis |\n| --- | --- |\n";
+      const body = rows.map((r) => `| \`${r.cmd}\` | ${r.desc} |`).join("\n");
+      return header + body;
+    };
+
     const embed = new EmbedBuilder()
       .setTitle("VEK 0.2 — Help")
       .setDescription(
@@ -67,31 +77,28 @@ module.exports = {
 
     const replyOpts = { embeds: [embed], flags: MessageFlags.Ephemeral };
 
+    // jeśli wybrano kategorię: jedna tabelka
     if (cat && COMMANDS[cat]) {
-      const lines = COMMANDS[cat]
-        .map((x) => `• **${x.cmd}** — ${x.desc}`)
-        .join("\n");
-
       embed.addFields({
         name: titles[cat],
-        value: lines || "Brak komend.",
+        value: makeTable(COMMANDS[cat]),
         inline: false,
       });
-
       return interaction.reply(replyOpts);
     }
 
-    const preview = (arr, n = 3) =>
-      arr
-        .slice(0, n)
-        .map((x) => `• **${x.cmd}** — ${x.desc}`)
-        .join("\n");
+    // brak kategorii: podgląd jak “tabelka startowa” (Twoje 5 komend)
+    const startTable = makeTable([
+      { cmd: "/ping", desc: "Sprawdza czy bot działa" },
+      { cmd: "/roll", desc: "Rzut kością (np. 2k6+3)" },
+      { cmd: "/balance", desc: "Sprawdzenie salda" },
+      { cmd: "/transfer", desc: "Przekazanie waluty" },
+      { cmd: "/leaderboard", desc: "Ranking graczy" },
+    ]);
 
     embed.addFields(
-      { name: titles.general, value: preview(COMMANDS.general, 2), inline: false },
-      { name: titles.profile, value: preview(COMMANDS.profile, 2), inline: false },
-      { name: titles.economy, value: preview(COMMANDS.economy, 2), inline: false },
-      { name: titles.info, value: preview(COMMANDS.info, 3), inline: false },
+      { name: "Start", value: startTable, inline: false },
+      { name: "Kategorie", value: "Ogólne • Profil / Level • Ekonomia • Info • Admin", inline: false },
       { name: titles.admin, value: "Tylko dla administracji serwera.", inline: false }
     );
 
