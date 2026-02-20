@@ -24,6 +24,28 @@ for (const file of commandFiles) {
   console.log("[deploy] Found:", command.data.name);
 }
 
+// po zebraniu commands[]
+const names = commands.map(c => c.name);
+const counts = names.reduce((acc, n) => (acc[n] = (acc[n] || 0) + 1, acc), {});
+const dups = Object.entries(counts).filter(([, v]) => v > 1);
+
+if (dups.length) {
+  console.log("DUPLICATE COMMAND NAMES FOUND:");
+  for (const [name, count] of dups) {
+    console.log(` - ${name}: ${count}x`);
+  }
+
+  // pokaż z jakimi opisami
+  for (const name of dups.map(([n]) => n)) {
+    console.log(`\nDescriptions for "${name}":`);
+    for (const cmd of commands.filter(c => c.name === name)) {
+      console.log(` - ${cmd.description}`);
+    }
+  }
+
+  throw new Error("Masz duplikaty .setName(...) w src/commands. Usuń/zmień jeden plik.");
+}
+
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
