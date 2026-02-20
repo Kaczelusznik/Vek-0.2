@@ -8,14 +8,14 @@ module.exports = {
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setTitle("📖 VEK 0.2 — Komendy")
+      .setTitle("VEK 0.2 — Komendy")
       .setDescription(
         "Poniżej znajduje się pełna lista komend podzielona na kategorie.\n" +
           "Niektóre komendy mogą wymagać uprawnień (np. admin)."
       )
       .addFields(
         {
-          name: "🧭 Ogólne",
+          name: "Ogólne",
           value:
             "• `/ping` — sprawdza czy bot działa\n" +
             "• `/help` — lista komend\n" +
@@ -23,47 +23,20 @@ module.exports = {
           inline: false,
         },
         {
-          name: "🎲 Roll",
-          value:
-            "• `/roll rzut:<np. 2k6+3>` — rzut kością w formacie k\n",
+          name: "Roll",
+          value: "• `/roll rzut:<np. 2k6+3>` — rzut kością w formacie k",
           inline: false,
         },
         {
-          name: "👤 Profil / Level",
+          name: "Ekonomia",
           value:
-            "• `/profil [user]` — profil (saldo, level, exp)\n",
-          inline: false,
-        },
-        {
-          name: "💸 Ekonomia",
-          value:
-            "• `/transfer user kwota user` — przelew od gracza do gracza\n" +
-            "• `/leaderboard` — ranking graczy" +
-            "• `/balance` — twoje saldo\n" +
-            "• `/balance [user]` — saldo użytkownika",
-          inline: false,
-        },
-        {
-          name: "ℹ️ Info",
-          value:
-            "• `/avatar [user]` — pokazuje avatar\n" +
-            "• `/userinfo [user]` — info o użytkowniku\n" +
-            "• `/serverinfo` — info o serwerze",
-          inline: false,
-        },
-        {
-          name: "🛡 Admin",
-          value:
-            "• `/add-money user kwota` — dodaj kasę\n" +
-            "• `/remove-money user kwota` — zabierz kasę\n" +
-            "• `/set-money user kwota` — ustaw saldo\n" +
-            "• `/set-level user level` — ustaw level\n" +
-            "• `/reset-user user` — reset profilu\n\n" +
-            "_Dostępne tylko dla admin/mod._",
+            "• `/leaderboard` — ranking bogaczy\n" +
+            "• `/addmoney` — dodaj monety (admin/mod)\n" +
+            "• `/removemoney` — zabierz monety (admin/mod)",
           inline: false,
         }
       )
-      .setFooter({ text: "VEK 0.2 • Ekonomia • Levele • Roll" })
+      .setFooter({ text: "VEK 0.2" })
       .setTimestamp();
 
     return interaction.reply({

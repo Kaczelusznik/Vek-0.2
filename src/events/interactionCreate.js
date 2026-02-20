@@ -1,34 +1,25 @@
-module.exports = async (interaction, client) => {
-  if (!interaction.isChatInputCommand()) return;
+// src/events/interactionCreate.js
+const NEED_DEFER = new Set(["addmoney", "removemoney", "leaderboard"]);
 
-  await interaction.deferReply({ ephemeral: true });
+module.exports = async (interaction, client) => {
+  if (!interaction?.isChatInputCommand?.()) return;
 
   const command = client.commands.get(interaction.commandName);
-  if (!command) return interaction.editReply({ content: "Nieznana komenda." });
-
-  return command.execute(interaction);
-};
-
-module.exports = async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = interaction.client.commands.get(interaction.commandName);
   if (!command) return;
 
   try {
-    // 🔥 ZAWSZE deferujemy tutaj — raz globalnie
-    await interaction.deferReply({ ephemeral: true });
+    if (NEED_DEFER.has(interaction.commandName)) {
+      await interaction.deferReply({ ephemeral: true });
+    }
 
-    // Uruchamiamy komendę
     await command.execute(interaction);
-
   } catch (error) {
     console.error("interactionCreate error:", error);
 
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: "❌ Wystąpił błąd." }).catch(() => {});
+      await interaction.editReply({ content: "Wystąpił błąd." }).catch(() => {});
     } else {
-      await interaction.reply({ content: "❌ Wystąpił błąd.", ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: "Wystąpił błąd.", ephemeral: true }).catch(() => {});
     }
   }
 };

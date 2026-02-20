@@ -1,3 +1,4 @@
+// src/commands/roll.js
 const { SlashCommandBuilder } = require("discord.js");
 
 const rollCooldown = new Map();
@@ -8,13 +9,15 @@ const OPS = {
 };
 
 function safeReply(interaction, payload) {
-  return (interaction.deferred || interaction.replied)
+  return interaction.deferred || interaction.replied
     ? interaction.followUp(payload)
     : interaction.reply(payload);
 }
 
 function parseDiceExpr(input) {
-  const m = String(input ?? "").trim().replace(/\s+/g, "")
+  const m = String(input ?? "")
+    .trim()
+    .replace(/\s+/g, "")
     .match(/^(\d+)[kK](\d+)([+\-*]\d+)?$/);
 
   if (!m) return { ok: false, error: "Format: 2k20, 2k20+5, 2k20*2" };
@@ -48,10 +51,7 @@ module.exports = {
     .setName("roll")
     .setDescription("Rzut kośćmi np. 2k20, 3k6+2")
     .addStringOption((option) =>
-      option
-        .setName("rzut")
-        .setDescription("Wpisz rzut, np. 2k20")
-        .setRequired(true)
+      option.setName("rzut").setDescription("Wpisz rzut, np. 2k20").setRequired(true)
     ),
 
   async execute(interaction) {
@@ -63,16 +63,7 @@ module.exports = {
     }
     rollCooldown.set(interaction.user.id, now);
 
-    const input =
-      interaction.options.getString("rzut") ??
-      interaction.options.getString("expr");
-
-    if (!input) {
-      return safeReply(interaction, {
-        content: "Brak parametru. Użyj: /roll rzut: 2k20",
-        ephemeral: true,
-      });
-    }
+    const input = interaction.options.getString("rzut");
 
     const parsed = parseDiceExpr(input);
     if (!parsed.ok) {
@@ -84,15 +75,9 @@ module.exports = {
     const rolls = Array.from({ length: count }, () => rollOnce(sides));
     const baseSum = rolls.reduce((a, b) => a + b, 0);
 
-    const finalResult = operator
-      ? OPS[operator](baseSum, modifierValue)
-      : baseSum;
-
-    const expressionText =
-      `${count}k${sides}` +
-      (operator ? `${operator}${modifierValue}` : "");
-
-    const oneLine = `${finalResult} ⟵ [${rolls.join(", ")}] ${expressionText}`;
+    const finalResult = operator ? OPS[operator](baseSum, modifierValue) : baseSum;
+    const expressionText = `${count}k${sides}` + (operator ? `${operator}${modifierValue}` : "");
+    const oneLine = `${finalResult} <- [${rolls.join(", ")}] ${expressionText}`;
 
     return safeReply(interaction, {
       content: `${interaction.user} \`${oneLine}\``,

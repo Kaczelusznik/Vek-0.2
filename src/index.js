@@ -48,7 +48,7 @@ const eventFiles = fs.existsSync(eventsPath)
   : [];
 
 for (const file of eventFiles) {
-  const eventName = path.parse(file).name; // np. clientReady, interactionCreate
+  const eventName = path.parse(file).name; // np. ready, interactionCreate
   const handler = require(path.join(eventsPath, file));
 
   if (typeof handler !== "function") {
@@ -56,13 +56,13 @@ for (const file of eventFiles) {
     continue;
   }
 
-if (eventName === "ready") {
-  client.once("ready", (...args) => handler(...args, client));
-  console.log("[events] Bound once:", eventName);
-} else {
-  client.on(eventName, (...args) => handler(...args, client));
-  console.log("[events] Bound:", eventName);
-}
+  if (eventName === "ready") {
+    client.once("ready", (...args) => handler(...args, client));
+    console.log("[events] Bound once:", eventName);
+  } else {
+    client.on(eventName, (...args) => handler(...args, client));
+    console.log("[events] Bound:", eventName);
+  }
 }
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
