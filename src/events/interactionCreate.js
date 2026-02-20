@@ -1,26 +1,23 @@
-// src/events/interactionCreate.js
-module.exports = async (client, interaction) => {
+module.exports = async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = interaction.client.commands.get(interaction.commandName);
+  if (!command) return;
+
   try {
-    if (!interaction.isChatInputCommand()) return;
+    // 🔥 ZAWSZE deferujemy tutaj — raz globalnie
+    await interaction.deferReply({ ephemeral: true });
 
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-
+    // Uruchamiamy komendę
     await command.execute(interaction);
-  } catch (err) {
-    console.error("interactionCreate error:", err);
 
-    // Jeśli komenda już odpowiedziała albo zrobiła defer — nie wolno reply drugi raz
+  } catch (error) {
+    console.error("interactionCreate error:", error);
+
     if (interaction.deferred || interaction.replied) {
-      return interaction.followUp({
-        content: "❌ Wystąpił błąd podczas wykonywania komendy.",
-        flags: 64, // ephemeral
-      });
+      await interaction.editReply({ content: "❌ Wystąpił błąd." }).catch(() => {});
+    } else {
+      await interaction.reply({ content: "❌ Wystąpił błąd.", ephemeral: true }).catch(() => {});
     }
-
-    return interaction.reply({
-      content: "❌ Wystąpił błąd podczas wykonywania komendy.",
-      flags: 64, // ephemeral
-    });
   }
 };
