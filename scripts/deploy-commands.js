@@ -1,5 +1,6 @@
 // scripts/deploy-commands.js
 require("dotenv").config();
+process.env.DB_INIT = "0";
 
 const fs = require("node:fs");
 const path = require("node:path");
