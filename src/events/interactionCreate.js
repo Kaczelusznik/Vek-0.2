@@ -1,3 +1,14 @@
+module.exports = async (interaction, client) => {
+  if (!interaction.isChatInputCommand()) return;
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return interaction.editReply({ content: "Nieznana komenda." });
+
+  return command.execute(interaction);
+};
+
 module.exports = async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 

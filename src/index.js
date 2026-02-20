@@ -56,13 +56,13 @@ for (const file of eventFiles) {
     continue;
   }
 
-  if (eventName === "clientReady") {
-    client.once("clientReady", (...args) => handler(client, ...args));
-    console.log("[events] Bound once:", eventName);
-  } else {
-    client.on(eventName, (...args) => handler(client, ...args));
-    console.log("[events] Bound:", eventName);
-  }
+if (eventName === "ready") {
+  client.once("ready", (...args) => handler(...args, client));
+  console.log("[events] Bound once:", eventName);
+} else {
+  client.on(eventName, (...args) => handler(...args, client));
+  console.log("[events] Bound:", eventName);
+}
 }
 
 client.login(process.env.DISCORD_TOKEN).catch((err) => {
