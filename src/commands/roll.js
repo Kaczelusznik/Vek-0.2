@@ -59,15 +59,18 @@ module.exports = {
     const last = rollCooldown.get(interaction.user.id) ?? 0;
 
     if (now - last < 3000) {
-      return safeReply(interaction, { content: "Poczekaj chwilę.", ephemeral: true });
+      return safeReply(interaction, { content: "Poczekaj chwilę." });
     }
     rollCooldown.set(interaction.user.id, now);
 
     const input = interaction.options.getString("rzut");
+    if (!input) {
+      return safeReply(interaction, { content: "Brak parametru. Użyj: /roll rzut: 2k20" });
+    }
 
     const parsed = parseDiceExpr(input);
     if (!parsed.ok) {
-      return safeReply(interaction, { content: parsed.error, ephemeral: true });
+      return safeReply(interaction, { content: parsed.error });
     }
 
     const { count, sides, operator, modifierValue } = parsed;
@@ -76,7 +79,10 @@ module.exports = {
     const baseSum = rolls.reduce((a, b) => a + b, 0);
 
     const finalResult = operator ? OPS[operator](baseSum, modifierValue) : baseSum;
-    const expressionText = `${count}k${sides}` + (operator ? `${operator}${modifierValue}` : "");
+
+    const expressionText =
+      `${count}k${sides}` + (operator ? `${operator}${modifierValue}` : "");
+
     const oneLine = `${finalResult} <- [${rolls.join(", ")}] ${expressionText}`;
 
     return safeReply(interaction, {

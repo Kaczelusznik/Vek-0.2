@@ -1,5 +1,5 @@
 // src/commands/help.js
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -8,14 +8,15 @@ module.exports = {
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setTitle("VEK 0.2 — Komendy")
+      .setTitle("📖 VEK 0.2 — Komendy")
+      .setColor(0xffa500) // pomarańczowy
       .setDescription(
         "Poniżej znajduje się pełna lista komend podzielona na kategorie.\n" +
           "Niektóre komendy mogą wymagać uprawnień (np. admin)."
       )
       .addFields(
         {
-          name: "Ogólne",
+          name: "🧭 Ogólne",
           value:
             "• `/ping` — sprawdza czy bot działa\n" +
             "• `/help` — lista komend\n" +
@@ -23,12 +24,12 @@ module.exports = {
           inline: false,
         },
         {
-          name: "Roll",
+          name: "🎲 Roll",
           value: "• `/roll rzut:<np. 2k6+3>` — rzut kością w formacie k",
           inline: false,
         },
         {
-          name: "Ekonomia",
+          name: "💸 Ekonomia",
           value:
             "• `/leaderboard` — ranking bogaczy\n" +
             "• `/addmoney` — dodaj monety (admin/mod)\n" +
@@ -36,12 +37,9 @@ module.exports = {
           inline: false,
         }
       )
-      .setFooter({ text: "VEK 0.2" })
+      .setFooter({ text: "VEK 0.2 bot stworzony dla was!" })
       .setTimestamp();
 
-    return interaction.reply({
-      embeds: [embed],
-      flags: MessageFlags.Ephemeral,
-    });
+    return interaction.reply({ embeds: [embed] }); // PUBLICZNE
   },
 };

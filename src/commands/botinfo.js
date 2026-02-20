@@ -11,12 +11,17 @@ module.exports = {
     const client = interaction.client;
     const uptime = process.uptime();
 
+    const days = Math.floor(uptime / 86400);
+    const hours = Math.floor((uptime % 86400) / 3600);
+    const mins = Math.floor((uptime % 3600) / 60);
+    const secs = Math.floor(uptime % 60);
+
     const embed = new EmbedBuilder()
-      .setTitle("VEK 0.2 — Status Systemu")
+      .setTitle("⚙️ VEK 0.2 — Status Systemu")
       .setColor(0x5e17eb)
       .addFields(
         {
-          name: "System",
+          name: "🧠 System",
           value:
             `Node.js: ${process.version}\n` +
             `RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB\n` +
@@ -24,20 +29,29 @@ module.exports = {
           inline: true,
         },
         {
-          name: "Połączenie",
-          value: `Ping: ${client.ws.ping} ms`,
+          name: "📡 Połączenie",
+          value:
+            `Ping: ${client.ws.ping} ms\n` +
+            `Shard: ${client.shard?.ids?.[0] ?? 0}`,
           inline: true,
         },
         {
-          name: "Uptime",
-          value: `${Math.floor(uptime / 86400)}d ${Math.floor((uptime % 86400) / 3600)}h ${Math.floor(
-            (uptime % 3600) / 60
-          )}m ${Math.floor(uptime % 60)}s`,
+          name: "🌍 Statystyki",
+          value:
+            `Serwery: ${client.guilds.cache.size}\n` +
+            `Użytkownicy: ${client.users.cache.size}\n` +
+            `Kanały: ${client.channels.cache.size}`,
+          inline: true,
+        },
+        {
+          name: "⏱ Uptime",
+          value: `${days}d ${hours}h ${mins}m ${secs}s`,
           inline: false,
         }
       )
+      .setFooter({ text: "VEK • System ekonomii • Roll • Poziomy" })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed] }); // PUBLICZNE
   },
 };

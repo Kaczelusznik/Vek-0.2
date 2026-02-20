@@ -16,13 +16,16 @@ module.exports = {
       const rows = await topBalances(interaction.guildId, limit);
 
       const embed = new EmbedBuilder()
-        .setTitle("Leaderboard - monety")
+        .setTitle("🏆 Leaderboard - monety")
         .setColor(0x20bd4a)
         .setDescription(
           rows.length
-            ? rows.map((r, i) => `#${i + 1} <@${r.user_id}> — ${r.balance}`).join("\n")
+            ? rows
+                .map((r, i) => `**${i + 1}.** <@${r.user_id}> — **${r.balance}** 💰`)
+                .join("\n")
             : "Brak danych."
         )
+        .setFooter({ text: "Jo nie wiedzioł, że tok dobrze wom idzie" })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });

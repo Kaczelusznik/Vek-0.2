@@ -8,8 +8,9 @@ module.exports = async (interaction, client) => {
   if (!command) return;
 
   try {
+    // defer tylko dla komend, które potem używają editReply()
     if (NEED_DEFER.has(interaction.commandName)) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply(); // PUBLICZNE (bez ephemeral)
     }
 
     await command.execute(interaction);
@@ -19,7 +20,7 @@ module.exports = async (interaction, client) => {
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: "Wystąpił błąd." }).catch(() => {});
     } else {
-      await interaction.reply({ content: "Wystąpił błąd.", ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: "Wystąpił błąd." }).catch(() => {});
     }
   }
 };

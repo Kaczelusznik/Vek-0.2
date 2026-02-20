@@ -2,13 +2,20 @@
 const { SlashCommandBuilder } = require("discord.js");
 const { addMoney } = require("../db");
 
-const ALLOWED_ROLES = ["【♔ Moderator ♔ 】", "【 ♘ Mistrz Gry ♘】", "【♕ Administrator ♕】", "Imperator"];
+const ALLOWED_ROLES = [
+  "【♔ Moderator ♔ 】",
+  "【 ♘ Mistrz Gry ♘】",
+  "【♕ Administrator ♕】",
+  "Imperator",
+];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("addmoney")
     .setDescription("Dodaj monety graczowi")
-    .addUserOption((opt) => opt.setName("gracz").setDescription("Komu dodać?").setRequired(true))
+    .addUserOption((opt) =>
+      opt.setName("gracz").setDescription("Komu dodać?").setRequired(true)
+    )
     .addIntegerOption((opt) =>
       opt.setName("kwota").setDescription("Ile dodać?").setMinValue(1).setRequired(true)
     ),
@@ -25,7 +32,7 @@ module.exports = {
       const newBal = await addMoney(interaction.guildId, target.id, amount);
 
       return interaction.editReply({
-        content: `Dodano ${amount} monet dla ${target}. Saldo: ${newBal - amount} -> ${newBal}`,
+        content: `Dodano **${amount}** monet dla ${target}. Saldo: **${newBal - amount} → ${newBal}**`,
         allowedMentions: { users: [target.id] },
       });
     } catch (err) {
