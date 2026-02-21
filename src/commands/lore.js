@@ -1,5 +1,63 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
+/* =========================
+   KOLORY (zdefiniowane u góry)
+   ========================= */
+const COLORS = {
+  // frakcje
+  pyovshehurdi: 0xD4AF37, // złoty
+  nezet: 0xFF4FA3, // różowy
+  wekretia: 0x0B1E5B, // granatowy (niebieski granatowy)
+  sztorm: 0x7A0C2E, // bordowy
+  pszenol: 0x000000, // czarny
+  zmora: 0x8B0026, // karmazynowy (zmora karmazynu)
+  atarach: 0x3AA7FF, // błękitny
+  dajrach: 0x1F8A4C, // zielony
+  dush: 0xFF8A00, // pomarańczowy
+  kapak: 0x2A0A45, // ciemny fiolet
+  zelazny_las: 0x6B3F24, // brązowy
+  naeveh: 0x19C6B4, // turkus
+  kamakojima: 0xD4001A, // czerwony
+  lichter: 0xFFFFFF, // biały
+  varkesh: 0x8B0026, // karmazyn
+
+  makiyaku: 0xB07CFF, // jasny fioletowy / purpurowy
+  kamachio: 0x1E6CFF, // niebieski
+
+  // tematy
+  slepcy: 0x120006, // czarny z czerwonym podbiciem (imitowany)
+  krysztal: 0x6A00FF, // fioletowy
+};
+
+/* =========================
+   MIEJSCA NA GRAFIKI (podmień później)
+   ========================= */
+const ASSETS = {
+  defaultThumb: "https://cdn.discordapp.com/splashes/1462546386485510188/ccd0e4a2ef77a362a9564030b001ef68.jpg?size=4096", // opcjonalnie
+  // frakcje
+  pyovshehurdi: "https://media.discordapp.net/attachments/800414422324871178/1474767013888000134/IMG_8833.jpg?ex=699b0b4f&is=6999b9cf&hm=a79253c1067125d3277dd98cc27ef706cdaeba03608fb77d190773e6358d4715&=&format=webp",
+  nezet: "https://media.discordapp.net/attachments/800414422324871178/1474766874867662950/IMG_8831.jpg?ex=699b0b2e&is=6999b9ae&hm=a0dcd091a0684a97a2acb18310e5e3073b534334bb04c9cd8355e65c699adf4b&=&format=webp&width=912&height=541",
+  wekretia: "https://media.discordapp.net/attachments/800414422324871178/1474764538456047818/IMG_8822.jpg?ex=699b0901&is=6999b781&hm=b7137fb13e1cc70e8330da770feb1711cf4a048dc73dea14db18998b2174cbcf&=&format=webp&width=912&height=521",
+  sztorm: "https://media.discordapp.net/attachments/800414422324871178/1474766866349166656/IMG_8829.jpg?ex=699b0b2c&is=6999b9ac&hm=38aef6683f33628d89bd926682abdc0bd50a2561c678567bf9ee999a447d7617&=&format=webp",
+  pszenol: "https://media.discordapp.net/attachments/800414422324871178/1474762600905572403/IMG_8818.jpg?ex=699b0733&is=6999b5b3&hm=0d27add4578121abd1cf18cd5f09dde1905b7b77b15c0048be9efd866693b918&=&format=webp&width=562&height=855",
+  zmora: "https://i.pinimg.com/736x/bd/d5/34/bdd534fe86e9c172546fed149ed009c0.jpg",
+  atarach: "https://media.discordapp.net/attachments/800414422324871178/1474766430384689324/IMG_8827.jpg?ex=699b0ac4&is=6999b944&hm=477407e17a8e4c98126d1975d302d61e4b3e4fdc8ccee94b998142b79f9e7601&=&format=webp&width=808&height=408",
+  dajrach: "https://media.discordapp.net/attachments/800414422324871178/1474766431131402392/IMG_8826.jpg?ex=699b0ac5&is=6999b945&hm=dce3c8a781ab8eedcda5773aef301a691d8af680f8ae866481716d2594c5dac4&=&format=webp&width=808&height=400",
+  dush: "https://media.discordapp.net/attachments/800414422324871178/1474758182403313755/IMG_8793.jpg?ex=699b0316&is=6999b196&hm=6fed4498ffc989be7a36263150466d1798b706b5c442d77ed107749411db71ba&=&format=webp&width=912&height=519",
+  kapak: "https://media.discordapp.net/attachments/800414422324871178/1474758268948578426/IMG_8794.jpg?ex=699b032b&is=6999b1ab&hm=57eaf87dcd0a45515cadef11cc341580e6e656e75fff5e758a8e5ab4b3e43750&=&format=webp",
+  zelazny_las: "https://media.discordapp.net/attachments/800414422324871178/1474759363108274461/IMG_8800.jpg?ex=699b042f&is=6999b2af&hm=ef54c56811b31f741a37839de549de9ce4b73f60e9398fab0271b6d5c4924206&=&format=webp&width=912&height=570",
+  naeveh: "https://media.discordapp.net/attachments/800414422324871178/1474766881847246959/IMG_8832.jpg?ex=699b0b30&is=6999b9b0&hm=f423e539cd3fd05b9b3a2e590967717710e5d0eeb413c211c21089bbf32b511b&=&format=webp&width=912&height=388",
+  kamakojima: "https://media.discordapp.net/attachments/800414422324871178/1474763558087557351/IMG_8819.jpg?ex=699b0818&is=6999b698&hm=5fb5b2fb6d933d62d9e0b0f42aba5ec79e8cb263a6b66774eb675c0c6c5a2b11&=&format=webp",
+  lichter: "https://media.discordapp.net/attachments/800414422324871178/1474759937451229267/IMG_8804.jpg?ex=699b04b8&is=6999b338&hm=b2b81cb86a9f500a0a936e98edaca2249e59ef96713e4d24f59da83ad94ea36d&=&format=webp&width=912&height=375",
+  varkesh: "https://media.discordapp.net/attachments/800414422324871178/1474760090241208452/IMG_8806.jpg?ex=699b04dd&is=6999b35d&hm=aa9fed89e3845dd93d8c4ffed8470fbfa32a1f5fb3d778d9204716486c0bbc2a&=&format=webp&width=912&height=462",
+  makiyaku: "https://media.discordapp.net/attachments/800414422324871178/1474759919961112626/IMG_8805.jpg?ex=699b04b4&is=6999b334&hm=db8d698c7d165c0c9e6ce2763885cadfb907406a260f1cdbbe6e689b8543ee79&=&format=webp&width=912&height=419",
+  kamachio: "https://media.discordapp.net/attachments/800414422324871178/1474759638225518735/IMG_8802.jpg?ex=699b0471&is=6999b2f1&hm=aca48a1a2468853b59b3ce5692bae9ff7f6812e031f51d6bfc4662f3eb04ace2&=&format=webp&width=912&height=535",
+
+  // tematy
+  slepcy: "https://media.discordapp.net/attachments/800414422324871178/1474758619135213640/IMG_8796.jpg?ex=699b037e&is=6999b1fe&hm=8a7e06157dad05a397ddd11d5ba26b3c3702cac0ac7d8fccc1d92b404ef3ce73&=&format=webp",
+  krysztal: "https://media.discordapp.net/attachments/800414422324871178/1474758619588329625/IMG_8795.jpg?ex=699b037e&is=6999b1fe&hm=c8014a56b5f25139bed45395950724e48418d7ff0aa3280e0fd2a73ea18c1a52&=&format=webp&width=808&height=453",
+};
+
 const FACTIONS = {
   pyovshehurdi: {
     title: "Królestwo Pyovshehurdi",
@@ -152,11 +210,13 @@ module.exports = {
     const sub = interaction.options.getSubcommand(true);
 
     let entry = null;
+    let key = null;
+
     if (sub === "frakcja") {
-      const key = interaction.options.getString("nazwa", true);
+      key = interaction.options.getString("nazwa", true);
       entry = FACTIONS[key];
     } else if (sub === "temat") {
-      const key = interaction.options.getString("nazwa", true);
+      key = interaction.options.getString("nazwa", true);
       entry = TOPICS[key];
     }
 
@@ -164,9 +224,30 @@ module.exports = {
       return interaction.reply({ content: "Brak takiego wpisu lore.", ephemeral: true });
     }
 
+    // kolor + grafika zależnie od wpisu
+    const color =
+      (sub === "frakcja" ? COLORS[key] : null) ||
+      (sub === "temat" ? COLORS[key] : null) ||
+      0x2B2D31;
+
+    const image =
+      (sub === "frakcja" ? ASSETS[key] : null) ||
+      (sub === "temat" ? ASSETS[key] : null) ||
+      null;
+
     const embed = new EmbedBuilder()
+      .setColor(color)
       .setTitle(entry.title)
-      .setDescription(entry.text);
+      .setDescription(entry.text)
+      // profesjonalne detale:
+      .setTimestamp()
+      .setFooter({ text: "VEK — Kroniki Kontynentu" });
+
+    // miejsce na zdjęcie (podmień URL-e w ASSETS)
+    if (image) embed.setImage(image);
+
+    // opcjonalny thumbnail (jeśli chcesz stałą ikonkę bota / świata)
+    if (ASSETS.defaultThumb) embed.setThumbnail(ASSETS.defaultThumb);
 
     return interaction.reply({ embeds: [embed] });
   },
