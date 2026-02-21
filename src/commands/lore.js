@@ -20,7 +20,6 @@ const COLORS = {
   kamakojima: 0xD4001A, // czerwony
   lichter: 0xFFFFFF, // biały
   varkesh: 0x8B0026, // karmazyn
-
   makiyaku: 0xB07CFF, // jasny fioletowy / purpurowy
   kamachio: 0x1E6CFF, // niebieski
 
@@ -33,7 +32,6 @@ const COLORS = {
    MIEJSCA NA GRAFIKI (podmień później)
    ========================= */
 const ASSETS = {
-  defaultThumb: "https://cdn.discordapp.com/splashes/1462546386485510188/ccd0e4a2ef77a362a9564030b001ef68.jpg?size=4096", // opcjonalnie
   // frakcje
   pyovshehurdi: "https://media.discordapp.net/attachments/800414422324871178/1474767013888000134/IMG_8833.jpg?ex=699b0b4f&is=6999b9cf&hm=a79253c1067125d3277dd98cc27ef706cdaeba03608fb77d190773e6358d4715&=&format=webp",
   nezet: "https://media.discordapp.net/attachments/800414422324871178/1474766874867662950/IMG_8831.jpg?ex=699b0b2e&is=6999b9ae&hm=a0dcd091a0684a97a2acb18310e5e3073b534334bb04c9cd8355e65c699adf4b&=&format=webp&width=912&height=541",
@@ -150,7 +148,7 @@ const TOPICS = {
     title: "Ślepcy",
     text: "W kronikach Wekretii mówi się o nich szeptem. Nie są królami, nie są kapłanami, a jednak ich cień pada na więcej miejsc, niż ktokolwiek chciałby przyznać. Pojawiają się tam, gdzie człowiek stoi na granicy - między nadzieją a rozpaczą, między wyborem a koniecznością. Nie mają jednego oblicza. Czasem są głosem zza ściany, czasem postacią w półmroku, czasem tylko uczuciem, że ktoś patrzy. Twierdzą, że pomagają. Oferują drogę, gdy wszystkie inne zdają się zamknięte. Nigdy jednak nie robią tego bez powodu. Ślepcy nie prowadzą wojen i nie zasiadają na tronach. A mimo to wpływają na losy ludzi, miast i całych krain. Ich obecność nie jest oczywista - raczej wyczuwalna. Jak napięcie w powietrzu przed burzą. Wielu uważa ich za wybawców. Inni za coś znacznie starszego i trudniejszego do nazwania. Jedno jest pewne: jeśli spotkasz Ślepca, to znaczy, że twoja historia właśnie zaczyna się naprawdę.",
   },
-  kryszty: {
+  krysztal: {
     title: "Kryształy Narminargowa",
     text: "Kryształ narminargowy to podstawowy surowiec Wekretii – jej ropa, jej złoto i jej przekleństwo w jednym. Występuje w żyłach skalnych, lecz bywa też znajdowany w zwykłym żwirze, niczym niepozorny odłamek kwarcu. Jego naturalna barwa jest delikatnie purpurowa – najczęstsza i względnie tania. Rzadsze odmiany przybierają kolor błękitny, a najcenniejsze – głęboki, krwisty czerwony.\nKryształ można modulować i rafinować. Skruszony służy do produkcji leków i narkotyków; stapiany z metalem tworzy stal narminargowską – trwalszą, lżejszą i bardziej sprężystą niż zwykłe stopy. Odpowiednio oczyszczony staje się nośnikiem energii: zasila mechanizmy, wzmacnia broń, stabilizuje eksperymenty.\nJest jednak kapryśny. Reaguje na środowisko, zanieczyszczenia i sposób obróbki. Źle przetworzony potrafi emitować niestabilne promieniowanie, wywołując mutacje, uzależnienia lub niekontrolowane reakcje energetyczne.\nDla jednych to fundament cywilizacji.\nDla innych – źródło wojen i upadku."
   },
@@ -170,23 +168,23 @@ module.exports = {
             .setDescription("Wybierz frakcję")
             .setRequired(true)
             .addChoices(
-                { name: "Królestwo Pyovshehurdi", value: "pyovshehurdi" },
-                { name: "Dyktaturat Nezetu", value: "nezet" },
-                { name: "Wielkie Księstwo Wekretii", value: "wekretia" },
-                { name: "Królestwo Sztormu", value: "sztorm" },
-                { name: "Wolne Miasto Pszenol", value: "pszenol" },
-                { name: "Zmora Karmazynu", value: "zmora" },
-                { name: "Sułtanat Atarach", value: "atarach" },
-                { name: "Sułtanat Dajrach", value: "dajrach" },
-                { name: "Wolne Miasto Dush", value: "dush" },
-                { name: "Hrabstwo Kapak", value: "kapak" },
-                { name: "Hrabstwo Żelaznego Lasu", value: "zelazny_las" },
-                { name: "Królestwo Naeveh", value: "naeveh" },
-                { name: "Imperium Kamakojimy", value: "kamakojima" },
-                { name: "Das Tal Der Lichter", value: "lichter" },
-                { name: "Varkesh", value: "varkesh" },
-                { name: "Shogunat Makiyaku", value: "makiyaku" },
-                { name: "Republika Kamachio", value: "kamachio" }
+              { name: "Królestwo Pyovshehurdi", value: "pyovshehurdi" },
+              { name: "Dyktaturat Nezetu", value: "nezet" },
+              { name: "Wielkie Księstwo Wekretii", value: "wekretia" },
+              { name: "Królestwo Sztormu", value: "sztorm" },
+              { name: "Wolne Miasto Pszenol", value: "pszenol" },
+              { name: "Zmora Karmazynu", value: "zmora" },
+              { name: "Sułtanat Atarach", value: "atarach" },
+              { name: "Sułtanat Dajrach", value: "dajrach" },
+              { name: "Wolne Miasto Dush", value: "dush" },
+              { name: "Hrabstwo Kapak", value: "kapak" },
+              { name: "Hrabstwo Żelaznego Lasu", value: "zelazny_las" },
+              { name: "Królestwo Naeveh", value: "naeveh" },
+              { name: "Imperium Kamakojimy", value: "kamakojima" },
+              { name: "Das Tal Der Lichter", value: "lichter" },
+              { name: "Varkesh", value: "varkesh" },
+              { name: "Shogunat Makiyaku", value: "makiyaku" },
+              { name: "Republika Kamachio", value: "kamachio" }
             )
         )
     )
@@ -224,30 +222,18 @@ module.exports = {
       return interaction.reply({ content: "Brak takiego wpisu lore.", ephemeral: true });
     }
 
-    // kolor + grafika zależnie od wpisu
-    const color =
-      (sub === "frakcja" ? COLORS[key] : null) ||
-      (sub === "temat" ? COLORS[key] : null) ||
-      0x2B2D31;
-
-    const image =
-      (sub === "frakcja" ? ASSETS[key] : null) ||
-      (sub === "temat" ? ASSETS[key] : null) ||
-      null;
+    const color = COLORS[key] || 0x2B2D31;
+    const image = ASSETS[key] || null;
 
     const embed = new EmbedBuilder()
       .setColor(color)
       .setTitle(entry.title)
       .setDescription(entry.text)
-      // profesjonalne detale:
       .setTimestamp()
       .setFooter({ text: "VEK — Kroniki Kontynentu" });
 
-    // miejsce na zdjęcie (podmień URL-e w ASSETS)
+    // duży obrazek (na dole embeda) – thumbnail celowo WYŁĄCZONY
     if (image) embed.setImage(image);
-
-    // opcjonalny thumbnail (jeśli chcesz stałą ikonkę bota / świata)
-    if (ASSETS.defaultThumb) embed.setThumbnail(ASSETS.defaultThumb);
 
     return interaction.reply({ embeds: [embed] });
   },
