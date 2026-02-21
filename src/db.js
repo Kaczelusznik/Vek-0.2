@@ -14,7 +14,7 @@ const pool = new Pool({
 });
 
 /* =======================================================
-   INIT — tworzy pełną tabelę zgodną z Railway
+   INIT — tworzy pełne tabele zgodne z Railway
 ======================================================= */
 async function init() {
   await pool.query(`
@@ -30,11 +30,32 @@ async function init() {
     );
   `);
 
-  // Upewnia się, że wszystkie kolumny istnieją (bezpieczne przy migracji)
+  // migracje (bezpieczne)
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1;`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS exp INTEGER NOT NULL DEFAULT 0;`);
-  await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();`);
-  await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();`);
+  await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS created_at DATE NOT NULL DEFAULT NOW();`);
+  await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS updated_at DATE NOT NULL DEFAULT NOW();`);
+
+  // server_state (plaga i inne globalne rzeczy)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS server_state (
+      key TEXT PRIMARY KEY,
+      value_int INTEGER NOT NULL DEFAULT 0,
+      last_auto_inc DATE NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // migracja kolumny, jeśli tabela powstała wcześniej bez last_auto_inc
+  await pool.query(
+    `ALTER TABLE server_state ADD COLUMN IF NOT EXISTS last_auto_inc DATE NOT NULL DEFAULT NOW();`
+  );
+
+  // domyślny rekord (bezpiecznie)
+  await pool.query(`
+    INSERT INTO server_state (key, value_int, last_auto_inc)
+    VALUES ('plague_level', 0, NOW())
+    ON CONFLICT (key) DO NOTHING;
+  `);
 }
 
 if (SHOULD_INIT) {
@@ -185,6 +206,68 @@ async function setLevel(guildId, userId, level) {
   return getProfile(guildId, userId);
 }
 
+/* =======================================================
+   SERVER STATE — PLAGA (weekly auto growth)
+   - auto rośnie +1 co pełny tydzień
+   - ręczne ustawienie NIE resetuje last_auto_inc
+======================================================= */
+async function getPlagueLevel() {
+  const res = await pool.query(
+    `SELECT value_int, last_auto_inc FROM server_state WHERE key = $1`,
+    ["plague_level"]
+  );
+
+  if (!res.rows[0]) return 0;
+
+  let level = Number(res.rows[0].value_int) || 0;
+
+  const last = new Date(res.rows[0].last_auto_inc);
+  const now = new Date();
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const weekMs = 7 * dayMs;
+
+  const diffMs = now.getTime() - last.getTime();
+  const weeksPassed = Math.floor(diffMs / weekMs);
+
+  if (weeksPassed > 0) {
+    level += weeksPassed;
+
+    // przesuwamy datę o pełne tygodnie (nadgania offline, nie "gubi" dni)
+    const nextLast = new Date(last.getTime() + weeksPassed * weekMs);
+
+    await pool.query(
+      `
+      UPDATE server_state
+      SET value_int = $2,
+          last_auto_inc = $3
+      WHERE key = $1
+    `,
+      ["plague_level", level, nextLast]
+    );
+  }
+
+  return level;
+}
+
+async function setPlagueLevel(level) {
+  if (!Number.isInteger(level) || level < 0) {
+    throw new Error("Poziom plagi musi być >= 0");
+  }
+
+  // NIE ruszamy last_auto_inc (Twoje wymaganie)
+  await pool.query(
+    `
+    UPDATE server_state
+    SET value_int = $2
+    WHERE key = $1
+  `,
+    ["plague_level", level]
+  );
+
+  return level;
+}
+
 /* ======================================================= */
 
 module.exports = {
@@ -195,4 +278,6 @@ module.exports = {
   topBalances,
   addExp,
   setLevel,
+  getPlagueLevel,
+  setPlagueLevel,
 };

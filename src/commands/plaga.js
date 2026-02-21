@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const { getPlagueLevel, setPlagueLevel } = require("../db");
 
 const ALLOWED_ROLES = [
@@ -35,13 +35,12 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand(true);
-    const guildId = interaction.guildId;
 
     if (sub === "show") {
-      const lvl = await getPlagueLevel(guildId);
+      const lvl = await getPlagueLevel();
 
       const embed = new EmbedBuilder()
-        .setTitle("Zmora Karmazynu")
+        .setTitle("☣ Zmora Karmazynu")
         .setDescription(`Aktualny poziom plagi na serwerze: **${lvl}/100**`);
 
       return interaction.reply({ embeds: [embed] });
@@ -49,11 +48,14 @@ module.exports = {
 
     if (sub === "set") {
       if (!hasRole(interaction.member)) {
-        return interaction.reply({ content: "Nie masz uprawnień.", ephemeral: true });
+        return interaction.reply({
+          content: "Nie masz uprawnień.",
+          flags: MessageFlags.Ephemeral,
+        });
       }
 
       const lvl = interaction.options.getInteger("poziom", true);
-      const newLvl = await setPlagueLevel(guildId, lvl);
+      const newLvl = await setPlagueLevel(lvl);
 
       return interaction.reply({
         content: `✅ Ustawiono poziom Zmory Karmazynu na **${newLvl}/100**`,
