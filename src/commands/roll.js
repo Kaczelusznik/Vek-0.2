@@ -2,6 +2,7 @@
 const { SlashCommandBuilder } = require("discord.js");
 
 const rollCooldown = new Map();
+
 const OPS = {
   "+": (a, b) => a + b,
   "-": (a, b) => a - b,
@@ -18,25 +19,42 @@ function parseDiceExpr(input) {
   const m = String(input ?? "")
     .trim()
     .replace(/\s+/g, "")
-    .match(/^(\d+)[kK](\d+)([+\-*]\d+)?$/);
+    .match(/^(\d+)?[kK](\d+)([+\-*]\d+)?$/);
 
-  if (!m) return { ok: false, error: "Format: 2k20, 2k20+5, 2k20*2" };
+  if (!m) {
+    return { ok: false, error: "Format: k20, 2k20, 2k20+5, 2k20*2" };
+  }
 
-  const count = Number(m[1]);
+  const count = m[1] ? Number(m[1]) : 1; // jeśli brak liczby -> 1 kość
   const sides = Number(m[2]);
   const tail = m[3];
 
   if (!Number.isInteger(count) || !Number.isInteger(sides)) {
     return { ok: false, error: "Niepoprawne liczby." };
   }
-  if (count < 1 || count > 50) return { ok: false, error: "Liczba kości 1–50." };
-  if (sides < 2 || sides > 1000) return { ok: false, error: "Kość 2–1000 ścian." };
 
-  const operator = tail ? tail[0] : null;
-  const modifierValue = tail ? Number(tail.slice(1)) : 0;
+  if (count < 1 || count > 50) {
+    return { ok: false, error: "Liczba kości 1–50." };
+  }
 
-  if (tail && !Number.isInteger(modifierValue)) {
-    return { ok: false, error: "Niepoprawny modyfikator." };
+  if (sides < 2 || sides > 1000) {
+    return { ok: false, error: "Kość 2–1000 ścian." };
+  }
+
+  let operator = null;
+  let modifierValue = 0;
+
+  if (tail) {
+    operator = tail[0];
+    modifierValue = Number(tail.slice(1));
+
+    if (!Number.isInteger(modifierValue)) {
+      return { ok: false, error: "Niepoprawny modyfikator." };
+    }
+
+    if (operator === "*" && modifierValue < 0) {
+      return { ok: false, error: "Mnożnik nie może być ujemny." };
+    }
   }
 
   return { ok: true, count, sides, operator, modifierValue };
@@ -49,9 +67,12 @@ function rollOnce(sides) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("roll")
-    .setDescription("Rzut kośćmi np. 2k20, 3k6+2")
+    .setDescription("Rzut kośćmi np. k20, 2k20, 3k6+2")
     .addStringOption((option) =>
-      option.setName("rzut").setDescription("Wpisz rzut, np. 2k20").setRequired(true)
+      option
+        .setName("rzut")
+        .setDescription("Wpisz rzut, np. k20 lub 2k20+5")
+        .setRequired(true)
     ),
 
   async execute(interaction) {
@@ -61,11 +82,14 @@ module.exports = {
     if (now - last < 3000) {
       return safeReply(interaction, { content: "Poczekaj chwilę." });
     }
+
     rollCooldown.set(interaction.user.id, now);
 
     const input = interaction.options.getString("rzut");
     if (!input) {
-      return safeReply(interaction, { content: "Brak parametru. Użyj: /roll rzut: 2k20" });
+      return safeReply(interaction, {
+        content: "Brak parametru. Użyj: /roll rzut: k20",
+      });
     }
 
     const parsed = parseDiceExpr(input);
@@ -78,15 +102,17 @@ module.exports = {
     const rolls = Array.from({ length: count }, () => rollOnce(sides));
     const baseSum = rolls.reduce((a, b) => a + b, 0);
 
-    const finalResult = operator ? OPS[operator](baseSum, modifierValue) : baseSum;
+    const finalResult = operator
+      ? OPS[operator](baseSum, modifierValue)
+      : baseSum;
 
     const expressionText =
       `${count}k${sides}` + (operator ? `${operator}${modifierValue}` : "");
 
-    const oneLine = `${finalResult} <- [${rolls.join(", ")}] ${expressionText}`;
+    const resultLine = `${finalResult} <- [${rolls.join(", ")}] ${expressionText}`;
 
     return safeReply(interaction, {
-      content: `${interaction.user} \`${oneLine}\``,
+      content: `${interaction.user} \`${resultLine}\``,
     });
   },
 };
