@@ -31,16 +31,16 @@ module.exports = {
     try {
       const res = await transferBalance(from.id, to.id, amount);
       return interaction.reply({
-        content: `✅ Przelano **${amount}** monet → ${to}. Twoje saldo: **${res.fromBalance}**`,
+        content: `<:adminofaszyzm:1001541863486013510> Przelano **${amount}** monet → ${to}. Twoje saldo: **${res.fromBalance}**`,
       });
     } catch (e) {
       if (String(e.message) === "insufficient") {
-        return interaction.reply({ content: "❌ Masz za mało monet.", ephemeral: true });
+        return interaction.reply({ content: "<:Tylkoniecenacebuli:1001585465826214098> Masz za mało monet.", ephemeral: true });
       }
       if (String(e.message) === "bad_amount") {
-        return interaction.reply({ content: "❌ Zła kwota.", ephemeral: true });
+        return interaction.reply({ content: "<:Tylkoniecenacebuli:1001585465826214098> Zła kwota.", ephemeral: true });
       }
-      return interaction.reply({ content: "❌ Błąd przelewu (sprawdź logi).", ephemeral: true });
+      return interaction.reply({ content: "<:Tylkoniecenacebuli:1001585465826214098> Błąd przelewu (sprawdź logi).", ephemeral: true });
     }
   },
 };

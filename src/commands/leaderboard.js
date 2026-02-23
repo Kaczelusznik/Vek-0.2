@@ -16,7 +16,7 @@ module.exports = {
       const rows = await topBalances(interaction.guildId, limit);
 
       const embed = new EmbedBuilder()
-        .setTitle("🏆 Leaderboard - monety")
+        .setTitle("<:hajs:1475527687945851060> Leaderboard - monety")
         .setColor(0x20bd4a)
         .setDescription(
           rows.length
@@ -25,7 +25,7 @@ module.exports = {
                 .join("\n")
             : "Brak danych."
         )
-        .setFooter({ text: "Jo nie wiedzioł, że tok dobrze wom idzie" })
+        .setFooter({ text: "<:hotmetalboy:1349828561279647886> Jo nie wiedzioł, że tok dobrze wom idzie" })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });

@@ -14,7 +14,7 @@ module.exports = {
     const bal = await getBalance(user.id);
 
     return interaction.reply({
-      content: `💰 Saldo ${user.username}: **${bal}** monet`,
+      content: `<:hajs:1475527687945851060> Saldo ${user.username}: **${bal}** monet`,
     });
   },
 };
