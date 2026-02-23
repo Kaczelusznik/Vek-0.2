@@ -1,4 +1,3 @@
-// src/db.js
 const { Pool } = require("pg");
 
 const SHOULD_INIT = process.env.DB_INIT !== "0";
@@ -13,9 +12,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-/* =======================================================
-   INIT — tworzy pełne tabele zgodne z Railway
-======================================================= */
 async function init() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS economy (
@@ -30,13 +26,11 @@ async function init() {
     );
   `);
 
-  // migracje (bezpieczne)
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1;`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS exp INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS created_at DATE NOT NULL DEFAULT NOW();`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS updated_at DATE NOT NULL DEFAULT NOW();`);
 
-  // server_state (plaga i inne globalne rzeczy)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS server_state (
       key TEXT PRIMARY KEY,
@@ -45,12 +39,10 @@ async function init() {
     );
   `);
 
-  // migracja kolumny, jeśli tabela powstała wcześniej bez last_auto_inc
   await pool.query(
     `ALTER TABLE server_state ADD COLUMN IF NOT EXISTS last_auto_inc DATE NOT NULL DEFAULT NOW();`
   );
 
-  // domyślny rekord (bezpiecznie)
   await pool.query(`
     INSERT INTO server_state (key, value_int, last_auto_inc)
     VALUES ('plague_level', 0, NOW())
@@ -95,7 +87,7 @@ async function getProfile(guildId, userId) {
 ======================================================= */
 async function getBalance(guildId, userId) {
   const profile = await getProfile(guildId, userId);
-  return profile.balance;
+  return Number(profile.balance) || 0;
 }
 
 async function addMoney(guildId, userId, amount) {
@@ -146,6 +138,79 @@ async function removeMoney(guildId, userId, amount, { allowNegative = false } = 
 }
 
 /* =======================================================
+   TRANSFER
+======================================================= */
+async function transferBalance(guildId, fromId, toId, amount) {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("bad_amount");
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Blokujemy wiersz nadawcy
+    const fromRes = await client.query(
+      `
+      SELECT balance
+      FROM economy
+      WHERE guild_id = $1 AND user_id = $2
+      FOR UPDATE
+    `,
+      [guildId, fromId]
+    );
+
+    const fromBalance = fromRes.rowCount ? Number(fromRes.rows[0].balance) : 0;
+
+    if (fromBalance < amount) {
+      throw new Error("insufficient");
+    }
+
+    // Upewnij się że odbiorca istnieje
+    await client.query(
+      `
+      INSERT INTO economy (guild_id, user_id, balance)
+      VALUES ($1, $2, 0)
+      ON CONFLICT (guild_id, user_id) DO NOTHING
+    `,
+      [guildId, toId]
+    );
+
+    // Odejmij nadawcy
+    const updatedFrom = await client.query(
+      `
+      UPDATE economy
+      SET balance = balance - $3,
+          updated_at = NOW()
+      WHERE guild_id = $1 AND user_id = $2
+      RETURNING balance
+    `,
+      [guildId, fromId, amount]
+    );
+
+    // Dodaj odbiorcy
+    await client.query(
+      `
+      UPDATE economy
+      SET balance = balance + $3,
+          updated_at = NOW()
+      WHERE guild_id = $1 AND user_id = $2
+    `,
+      [guildId, toId, amount]
+    );
+
+    await client.query("COMMIT");
+
+    return { fromBalance: Number(updatedFrom.rows[0].balance) };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/* =======================================================
    LEADERBOARD
 ======================================================= */
 async function topBalances(guildId, limit = 10) {
@@ -164,7 +229,7 @@ async function topBalances(guildId, limit = 10) {
 }
 
 /* =======================================================
-   EXP / LEVEL (pod przyszłe levele)
+   EXP / LEVEL
 ======================================================= */
 async function addExp(guildId, userId, amount) {
   if (!Number.isInteger(amount) || amount <= 0) {
@@ -207,9 +272,7 @@ async function setLevel(guildId, userId, level) {
 }
 
 /* =======================================================
-   SERVER STATE — PLAGA (weekly auto growth)
-   - auto rośnie +1 co pełny tydzień
-   - ręczne ustawienie NIE resetuje last_auto_inc
+   SERVER STATE — PLAGA
 ======================================================= */
 async function getPlagueLevel() {
   const res = await pool.query(
@@ -232,8 +295,6 @@ async function getPlagueLevel() {
 
   if (weeksPassed > 0) {
     level += weeksPassed;
-
-    // przesuwamy datę o pełne tygodnie (nadgania offline, nie "gubi" dni)
     const nextLast = new Date(last.getTime() + weeksPassed * weekMs);
 
     await pool.query(
@@ -255,7 +316,6 @@ async function setPlagueLevel(level) {
     throw new Error("Poziom plagi musi być >= 0");
   }
 
-  // NIE ruszamy last_auto_inc (Twoje wymaganie)
   await pool.query(
     `
     UPDATE server_state
@@ -268,13 +328,12 @@ async function setPlagueLevel(level) {
   return level;
 }
 
-/* ======================================================= */
-
 module.exports = {
   getProfile,
   getBalance,
   addMoney,
   removeMoney,
+  transferBalance,
   topBalances,
   addExp,
   setLevel,
