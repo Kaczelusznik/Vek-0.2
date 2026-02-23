@@ -21,11 +21,11 @@ module.exports = {
         .setDescription(
           rows.length
             ? rows
-                .map((r, i) => `**${i + 1}.** <@${r.user_id}> — **${r.balance}** 💰`)
+                .map((r, i) => `**${i + 1}.** <@${r.user_id}> — **${r.balance}** <:hajs:1475527687945851060>`)
                 .join("\n")
             : "Brak danych."
         )
-        .setFooter({ text: "<:hotmetalboy:1349828561279647886> Jo nie wiedzioł, że tok dobrze wom idzie" })
+        .setFooter({ text: "Jo nie wiedzioł, że tok dobrze wom idzie" })
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });
