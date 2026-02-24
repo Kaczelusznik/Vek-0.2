@@ -13,15 +13,17 @@ module.exports = async (client) => {
 
   console.log("Has OPENAI_API_KEY:", Boolean(process.env.OPENAI_API_KEY));
 
-  // TEST AI (na razie tylko log do konsoli)
+  // TWARDY TEST AI
+  console.log("[AI] test start");
   try {
     const txt = await testAI();
-    console.log("AI TEST:", txt);
+    console.log("[AI] test ok:", txt);
   } catch (e) {
-    console.error("AI TEST ERROR:", e);
+    console.error("[AI] test error:", e);
   }
+  console.log("[AI] test end");
 
-  // RP autopost (bez komend) — start po zalogowaniu
+  // RP autopost
   try {
     await startRpScheduler(client);
   } catch (err) {
