@@ -512,6 +512,64 @@ async function markRpCampaignRan(id, intervalMinutes) {
   return { ok: res.rowCount > 0, next_run_at: next };
 }
 
+/* =======================================================
+   RP STATE (numer sceny)
+======================================================= */
+
+async function ensureRpState(guildId, channelId) {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  const found = await pool.query(
+    `
+    SELECT id
+    FROM rp_state
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+    `,
+    [guildId, channelId]
+  );
+
+  if (found.rowCount) return;
+
+  await pool.query(
+    `
+    INSERT INTO rp_state (guild_id, channel_id, scene_no, updated_at)
+    VALUES ($1, $2, 1, $3)
+    `,
+    [guildId, channelId, nowSec]
+  );
+}
+
+async function getRpState(guildId, channelId) {
+  const res = await pool.query(
+    `
+    SELECT scene_no
+    FROM rp_state
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+    `,
+    [guildId, channelId]
+  );
+
+  if (!res.rowCount) return { scene_no: 1 };
+
+  return res.rows[0];
+}
+
+async function bumpRpScene(guildId, channelId) {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  await pool.query(
+    `
+    UPDATE rp_state
+    SET scene_no = scene_no + 1,
+        updated_at = $3
+    WHERE guild_id = $1 AND channel_id = $2
+    `,
+    [guildId, channelId, nowSec]
+  );
+}
+
 module.exports = {
   getProfile,
 
@@ -535,4 +593,8 @@ module.exports = {
   ensureRpCampaign,
   getDueRpCampaigns,
   markRpCampaignRan,
+
+  ensureRpState,
+  getRpState,
+  bumpRpScene,
 };
