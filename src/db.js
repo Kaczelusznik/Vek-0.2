@@ -19,27 +19,19 @@ const pool = new Pool({
 function parseAmount2(input) {
   const n = typeof input === "string" ? Number(input.replace(",", ".")) : Number(input);
 
-  if (!Number.isFinite(n)) {
-    throw new Error("Kwota musi być liczbą.");
-  }
-
-  if (n <= 0) {
-    throw new Error("Kwota musi być > 0.");
-  }
+  if (!Number.isFinite(n)) throw new Error("Kwota musi być liczbą.");
+  if (n <= 0) throw new Error("Kwota musi być > 0.");
 
   const rounded = Math.round(n * 100) / 100;
+  if (!(rounded > 0)) throw new Error("Kwota musi być > 0.");
 
-  // zabezpieczenie przed wartościami typu 0.0000001 po konwersji
-  if (!(rounded > 0)) {
-    throw new Error("Kwota musi być > 0.");
-  }
-
-  return {
-    num: rounded,
-    str: rounded.toFixed(2),
-  };
+  return { num: rounded, str: rounded.toFixed(2) };
 }
 
+/* =======================================================
+   INIT
+   Uwaga: rp_campaigns jest już u Ciebie w DB – NIE zmieniamy typów.
+======================================================= */
 async function init() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS economy (
@@ -55,6 +47,7 @@ async function init() {
     );
   `);
 
+  // migracje (bezpieczne)
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS balance INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(
     `ALTER TABLE economy ADD COLUMN IF NOT EXISTS crystal_balance NUMERIC(12,2) NOT NULL DEFAULT 0;`
@@ -82,6 +75,7 @@ async function init() {
     ON CONFLICT (key) DO NOTHING;
   `);
 
+  // rp_campaigns – zostawiamy tak jak masz. Jeśli tabela już istnieje, CREATE IF NOT EXISTS nic nie popsuje.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rp_campaigns (
       id               SERIAL PRIMARY KEY,
@@ -92,9 +86,9 @@ async function init() {
       next_run_at      BIGINT NOT NULL,
       title            TEXT NOT NULL DEFAULT 'Marcelina von Skulszczit',
       created_at       BIGINT NOT NULL,
-      updated_at       BIGINT NOT NULL
-  );
-`);
+      updated_at       INTEGER NOT NULL
+    );
+  `);
 }
 
 if (SHOULD_INIT) {
@@ -214,7 +208,7 @@ async function addCrystal(guildId, userId, amount) {
 }
 
 async function removeCrystal(guildId, userId, amount, { allowNegative = false } = {}) {
-  const { num, str } = parseAmount2(amount);
+  const { num } = parseAmount2(amount);
 
   const current = await getCrystalBalance(guildId, userId);
   const nextNum = Math.round((current - num) * 100) / 100;
@@ -242,9 +236,7 @@ async function removeCrystal(guildId, userId, amount, { allowNegative = false } 
    TRANSFER
 ======================================================= */
 async function transferBalance(guildId, fromId, toId, amount) {
-  if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("bad_amount");
-  }
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error("bad_amount");
 
   const client = await pool.connect();
   try {
@@ -261,10 +253,7 @@ async function transferBalance(guildId, fromId, toId, amount) {
     );
 
     const fromBalance = fromRes.rowCount ? Number(fromRes.rows[0].balance) : 0;
-
-    if (fromBalance < amount) {
-      throw new Error("insufficient");
-    }
+    if (fromBalance < amount) throw new Error("insufficient");
 
     await client.query(
       `
@@ -297,7 +286,6 @@ async function transferBalance(guildId, fromId, toId, amount) {
     );
 
     await client.query("COMMIT");
-
     return { fromBalance: Number(updatedFrom.rows[0].balance) };
   } catch (e) {
     await client.query("ROLLBACK");
@@ -321,7 +309,6 @@ async function topBalances(guildId, limit = 10) {
   `,
     [guildId, limit]
   );
-
   return res.rows;
 }
 
@@ -336,7 +323,6 @@ async function topCrystalBalances(guildId, limit = 10) {
   `,
     [guildId, limit]
   );
-
   return res.rows;
 }
 
@@ -364,9 +350,7 @@ async function addExp(guildId, userId, amount) {
 }
 
 async function setLevel(guildId, userId, level) {
-  if (!Number.isInteger(level) || level < 1) {
-    throw new Error("Level musi być >= 1.");
-  }
+  if (!Number.isInteger(level) || level < 1) throw new Error("Level musi być >= 1.");
 
   await pool.query(
     `
@@ -387,10 +371,9 @@ async function setLevel(guildId, userId, level) {
    SERVER STATE  PLAGA
 ======================================================= */
 async function getPlagueLevel() {
-  const res = await pool.query(
-    `SELECT value_int, last_auto_inc FROM server_state WHERE key = $1`,
-    ["plague_level"]
-  );
+  const res = await pool.query(`SELECT value_int, last_auto_inc FROM server_state WHERE key = $1`, [
+    "plague_level",
+  ]);
 
   if (!res.rows[0]) return 0;
 
@@ -424,9 +407,7 @@ async function getPlagueLevel() {
 }
 
 async function setPlagueLevel(level) {
-  if (!Number.isInteger(level) || level < 0) {
-    throw new Error("Poziom plagi musi być >= 0");
-  }
+  if (!Number.isInteger(level) || level < 0) throw new Error("Poziom plagi musi być >= 0");
 
   await pool.query(
     `
@@ -442,16 +423,15 @@ async function setPlagueLevel(level) {
 
 /* =======================================================
    RP CAMPAIGNS
-   Czas trzymamy w bigint jako Date.now() czyli ms
+   UWAGA: next_run_at / created_at = BIGINT, updated_at = INTEGER (u Ciebie int4)
+   Trzymamy CZAS W SEKUNDACH (epoch seconds), żeby mieścił się w int4.
 ======================================================= */
+function nowSec() {
+  return Math.floor(Date.now() / 1000);
+}
 
-async function ensureRpCampaign({
-  guildId,
-  channelId,
-  intervalMinutes = 5,
-  title = "Marcelina von Skulszczit",
-}) {
-  const nowSec = Math.floor(Date.now() / 1000);
+async function ensureRpCampaign({ guildId, channelId, intervalMinutes = 5, title = "Marcelina von Skulszczit" }) {
+  const t = nowSec();
 
   const found = await pool.query(
     `
@@ -476,7 +456,7 @@ async function ensureRpCampaign({
       WHERE id = $4
       RETURNING *
       `,
-      [intervalMinutes, title, nowSec, id]
+      [intervalMinutes, title, t, id]
     );
 
     return updated.rows[0];
@@ -490,42 +470,46 @@ async function ensureRpCampaign({
       ($1, $2, TRUE, $3, $4::bigint, $5, $6::bigint, $7::integer)
     RETURNING *
     `,
-    [guildId, channelId, intervalMinutes, nowSec, title, nowSec, nowSec]
+    [guildId, channelId, intervalMinutes, t, title, t, t]
   );
 
   return inserted.rows[0];
 }
 
 async function getDueRpCampaigns() {
-  const now = Date.now();
+  const t = nowSec();
   const res = await pool.query(
     `
     SELECT *
     FROM rp_campaigns
     WHERE is_enabled = TRUE
-      AND next_run_at <= $1
+      AND next_run_at <= $1::bigint
     ORDER BY next_run_at ASC
   `,
-    [now]
+    [t]
   );
   return res.rows;
 }
 
 async function markRpCampaignRan(id, intervalMinutes) {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const nextSec = nowSec + Number(intervalMinutes) * 60;
+  const t = nowSec();
+  const intervalSec = Math.max(1, Number(intervalMinutes) * 60);
+  const next = t + intervalSec;
 
-  await pool.query(
+  // anty-duble: przesuwamy tylko jeśli nadal jest "due"
+  const res = await pool.query(
     `
     UPDATE rp_campaigns
     SET next_run_at = $2::bigint,
         updated_at = $3::integer
     WHERE id = $1
+      AND next_run_at <= $3::bigint
+    RETURNING next_run_at
     `,
-    [id, nextSec, nowSec]
+    [id, next, t]
   );
 
-  return { next_run_at: nextSec };
+  return { ok: res.rowCount > 0, next_run_at: next };
 }
 
 module.exports = {
