@@ -451,36 +451,49 @@ async function ensureRpCampaign({
   intervalMinutes = 5,
   title = "Marcelina von Skulszczit",
 }) {
-  const nowSec = Math.floor(Date.now() / 1000); // sekundy
+  const nowSec = Math.floor(Date.now() / 1000);
 
-  const res = await pool.query(
+  const found = await pool.query(
     `
-    INSERT INTO rp_campaigns
-      (guild_id, channel_id, is_enabled, interval_minutes,
-       next_run_at, title, created_at, updated_at)
-    VALUES
-      ($1, $2, TRUE, $3,
-       $4::bigint, $5, $6::bigint, $7::integer)
-    ON CONFLICT (guild_id, channel_id)
-    DO UPDATE SET
-      is_enabled = TRUE,
-      interval_minutes = EXCLUDED.interval_minutes,
-      title = EXCLUDED.title,
-      updated_at = EXCLUDED.updated_at
-    RETURNING *
+    SELECT id
+    FROM rp_campaigns
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
     `,
-    [
-      guildId,
-      channelId,
-      intervalMinutes,
-      nowSec,
-      title,
-      nowSec,
-      nowSec, // updated_at jako integer
-    ]
+    [guildId, channelId]
   );
 
-  return res.rows[0];
+  if (found.rowCount) {
+    const id = found.rows[0].id;
+
+    const updated = await pool.query(
+      `
+      UPDATE rp_campaigns
+      SET is_enabled = TRUE,
+          interval_minutes = $1,
+          title = $2,
+          updated_at = $3::integer
+      WHERE id = $4
+      RETURNING *
+      `,
+      [intervalMinutes, title, nowSec, id]
+    );
+
+    return updated.rows[0];
+  }
+
+  const inserted = await pool.query(
+    `
+    INSERT INTO rp_campaigns
+      (guild_id, channel_id, is_enabled, interval_minutes, next_run_at, title, created_at, updated_at)
+    VALUES
+      ($1, $2, TRUE, $3, $4::bigint, $5, $6::bigint, $7::integer)
+    RETURNING *
+    `,
+    [guildId, channelId, intervalMinutes, nowSec, title, nowSec, nowSec]
+  );
+
+  return inserted.rows[0];
 }
 
 async function getDueRpCampaigns() {
