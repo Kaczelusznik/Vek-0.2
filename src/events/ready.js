@@ -10,6 +10,9 @@ module.exports = async (client) => {
     status: "online",
   });
 
+  // SPRAWDZENIE CZY AI KLUCZ JEST
+  console.log("Has OPENAI_API_KEY:", Boolean(process.env.OPENAI_API_KEY));
+
   // RP autopost (bez komend) — start po zalogowaniu
   try {
     await startRpScheduler(client);
