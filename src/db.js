@@ -445,49 +445,42 @@ async function setPlagueLevel(level) {
    Czas trzymamy w bigint jako Date.now() czyli ms
 ======================================================= */
 
-async function ensureRpCampaign({ guildId, channelId, intervalMinutes = 5, title = "Marcelina von Skulszczit" }) {
-  const now = Date.now();
-
-  await pool.query(
-    `
-    INSERT INTO rp_campaigns (guild_id, channel_id, is_enabled, interval_minutes, next_run_at, title, created_at, updated_at)
-    VALUES ($1, $2, TRUE, $3, $4, $5, $6, $6)
-    ON CONFLICT (id) DO NOTHING
-  `,
-    [guildId, channelId, intervalMinutes, now, title, now]
-  );
+async function ensureRpCampaign({
+  guildId,
+  channelId,
+  intervalMinutes = 5,
+  title = "Marcelina von Skulszczit",
+}) {
+  const nowSec = Math.floor(Date.now() / 1000); // sekundy
 
   const res = await pool.query(
     `
-    SELECT *
-    FROM rp_campaigns
-    WHERE guild_id = $1 AND channel_id = $2
-    LIMIT 1
-  `,
-    [guildId, channelId]
+    INSERT INTO rp_campaigns
+      (guild_id, channel_id, is_enabled, interval_minutes,
+       next_run_at, title, created_at, updated_at)
+    VALUES
+      ($1, $2, TRUE, $3,
+       $4::bigint, $5, $6::bigint, $7::integer)
+    ON CONFLICT (guild_id, channel_id)
+    DO UPDATE SET
+      is_enabled = TRUE,
+      interval_minutes = EXCLUDED.interval_minutes,
+      title = EXCLUDED.title,
+      updated_at = EXCLUDED.updated_at
+    RETURNING *
+    `,
+    [
+      guildId,
+      channelId,
+      intervalMinutes,
+      nowSec,
+      title,
+      nowSec,
+      nowSec, // updated_at jako integer
+    ]
   );
 
-  if (res.rowCount) return res.rows[0];
-
-  await pool.query(
-    `
-    INSERT INTO rp_campaigns (guild_id, channel_id, is_enabled, interval_minutes, next_run_at, title, created_at, updated_at)
-    VALUES ($1, $2, TRUE, $3, $4, $5, $6, $6)
-  `,
-    [guildId, channelId, intervalMinutes, now, title, now]
-  );
-
-  const res2 = await pool.query(
-    `
-    SELECT *
-    FROM rp_campaigns
-    WHERE guild_id = $1 AND channel_id = $2
-    LIMIT 1
-  `,
-    [guildId, channelId]
-  );
-
-  return res2.rows[0];
+  return res.rows[0];
 }
 
 async function getDueRpCampaigns() {
@@ -506,20 +499,20 @@ async function getDueRpCampaigns() {
 }
 
 async function markRpCampaignRan(id, intervalMinutes) {
-  const now = Date.now();
-  const next = now + Number(intervalMinutes) * 60 * 1000;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const nextSec = nowSec + Number(intervalMinutes) * 60;
 
   await pool.query(
     `
     UPDATE rp_campaigns
-    SET next_run_at = $2,
-        updated_at = $3
+    SET next_run_at = $2::bigint,
+        updated_at = $3::integer
     WHERE id = $1
-  `,
-    [id, next, now]
+    `,
+    [id, nextSec, nowSec]
   );
 
-  return { next_run_at: next };
+  return { next_run_at: nextSec };
 }
 
 module.exports = {
