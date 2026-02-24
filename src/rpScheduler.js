@@ -6,15 +6,24 @@ const {
   ensureRpState,
   getRpState,
   bumpRpScene,
+  ensureRpMemory,
+  getRpMemory,
+  appendRpMemory,
 } = require("./db");
 
-function makeMarcelinaMessage(title, sceneNo) {
+function makeMarcelinaMessage(title, sceneNo, memory) {
   const now = new Date().toLocaleString("pl-PL");
+
+  const kronika = memory
+    ? `**Kronika:**\n> ${memory.split("\n").slice(-3).join("\n> ")}\n\n`
+    : "";
+
   return (
     `**[VEK] ${title}**\n` +
     `**Scena ${sceneNo}**\n\n` +
+    kronika +
     `Cicho mówisz pod nosem "Potwór". Rozkaz Króla Anastazji nie zostawia miejsca na wahanie.\n` +
-    `Marcelina von Skulszczit zaciska palce na paskach ekwipunku i rusza w stronę bramy. ${now}`
+    `Marcelina von Skulszczit zaciska palce na paskach ekwipunku i rusza dalej. ${now}`
   );
 }
 
@@ -23,19 +32,29 @@ async function sendToCampaign(client, campaign) {
   const moved = await markRpCampaignRan(campaign.id, campaign.interval_minutes);
   if (!moved || moved.ok === false) return;
 
-  // 2) numer sceny z rp_state
+  // 2) zapewnij stan i pamięć
   await ensureRpState(campaign.guild_id, campaign.channel_id);
+  await ensureRpMemory(campaign.guild_id, campaign.channel_id);
+
   const st = await getRpState(campaign.guild_id, campaign.channel_id);
   const sceneNo = Number(st.scene_no) || 1;
+
+  const memory = await getRpMemory(campaign.guild_id, campaign.channel_id);
 
   // 3) wysyłka
   const channel = await client.channels.fetch(campaign.channel_id).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  const content = makeMarcelinaMessage(campaign.title, sceneNo);
+  const content = makeMarcelinaMessage(campaign.title, sceneNo, memory);
   await channel.send({ content });
 
-  // 4) podbij numer sceny na następną turę
+  // 4) aktualizacja pamięci i sceny
+  await appendRpMemory(
+    campaign.guild_id,
+    campaign.channel_id,
+    `Scena ${sceneNo}: Marcelina idzie dalej z rozkazem Anastazji, coraz bliżej celu.`
+  );
+
   await bumpRpScene(campaign.guild_id, campaign.channel_id);
 }
 
@@ -54,7 +73,6 @@ async function startRpScheduler(client) {
   const enabled = (process.env.RP_ENABLED ?? "1") !== "0";
   if (!enabled) return;
 
-  // U Ciebie w env jest GUILD_ID, więc zostawiamy
   const guildId = process.env.GUILD_ID;
   const channelId = process.env.RP_CHANNEL_ID;
 
@@ -68,6 +86,7 @@ async function startRpScheduler(client) {
 
   await ensureRpCampaign({ guildId, channelId, intervalMinutes, title });
   await ensureRpState(guildId, channelId);
+  await ensureRpMemory(guildId, channelId);
 
   // od razu spróbuj wysłać, jeśli next_run_at jest due
   await tick(client);

@@ -570,6 +570,71 @@ async function bumpRpScene(guildId, channelId) {
   );
 }
 
+/* =======================================================
+   RP MEMORY (krótka pamięć fabuły)
+======================================================= */
+
+async function ensureRpMemory(guildId, channelId) {
+  const t = Math.floor(Date.now() / 1000);
+
+  const found = await pool.query(
+    `
+    SELECT id
+    FROM rp_memory
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+    `,
+    [guildId, channelId]
+  );
+
+  if (found.rowCount) return;
+
+  await pool.query(
+    `
+    INSERT INTO rp_memory (guild_id, channel_id, summary, updated_at)
+    VALUES ($1, $2, '', $3)
+    `,
+    [guildId, channelId, t]
+  );
+}
+
+async function getRpMemory(guildId, channelId) {
+  const res = await pool.query(
+    `
+    SELECT summary
+    FROM rp_memory
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+    `,
+    [guildId, channelId]
+  );
+
+  return res.rowCount ? (res.rows[0].summary ?? "") : "";
+}
+
+async function appendRpMemory(guildId, channelId, line) {
+  const t = Math.floor(Date.now() / 1000);
+
+  const current = await getRpMemory(guildId, channelId);
+  const next = (current ? current + "\n" : "") + line;
+
+  // limit na pamięć (żeby nie rosło w nieskończoność)
+  const maxLen = 2000;
+  const trimmed = next.length > maxLen ? next.slice(next.length - maxLen) : next;
+
+  await pool.query(
+    `
+    UPDATE rp_memory
+    SET summary = $3,
+        updated_at = $4
+    WHERE guild_id = $1 AND channel_id = $2
+    `,
+    [guildId, channelId, trimmed, t]
+  );
+
+  return trimmed;
+}
+
 module.exports = {
   getProfile,
 
@@ -597,4 +662,8 @@ module.exports = {
   ensureRpState,
   getRpState,
   bumpRpScene,
+
+  ensureRpMemory,
+  getRpMemory,
+  appendRpMemory,
 };
