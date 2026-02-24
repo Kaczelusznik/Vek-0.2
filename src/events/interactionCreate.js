@@ -1,14 +1,18 @@
 // src/events/interactionCreate.js
 
+// src/events/interactionCreate.js
 const { upsertRpVote } = require("../db");
 
-module.exports = async (interaction) => {
-  try {
-    if (interaction.isButton()) {
-      const id = interaction.customId || "";
-      if (id.startsWith("rpvote:")) {
-        const [, sceneIdRaw, optionKey] = id.split(":");
-        const sceneId = Number(sceneIdRaw);
+module.exports = async (interaction, client) => {
+  // 1) BUTTONS: RP VOTE
+  if (interaction.isButton()) {
+    const id = String(interaction.customId || "");
+
+    if (id.startsWith("rpvote:")) {
+      try {
+        const parts = id.split(":");
+        const sceneId = Number(parts[1]);
+        const optionKey = parts[2];
 
         if (!Number.isInteger(sceneId) || !optionKey) {
           return interaction.reply({ content: "Błędny głos.", ephemeral: true });
@@ -16,18 +20,20 @@ module.exports = async (interaction) => {
 
         await upsertRpVote(sceneId, interaction.user.id, optionKey);
         return interaction.reply({ content: `Oddano głos: ${optionKey}`, ephemeral: true });
+      } catch (e) {
+        console.error("[RP] vote error:", e);
+        if (!interaction.replied && !interaction.deferred) {
+          return interaction.reply({ content: "Nie udało się zapisać głosu.", ephemeral: true });
+        }
+        return;
       }
     }
 
-    // tu zostawiasz swoją obecną obsługę komend slash
-  } catch (e) {
-    console.error("interactionCreate error:", e);
-    if (!interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.reply({ content: "Wystąpił błąd.", ephemeral: true });
-      } catch {}
-    }
+    // jeśli to inny button, niech leci dalej do reszty Twojej logiki
   }
+
+  // 2) TU DOPIERO Twoja obecna obsługa slash commands
+  // (zostaw jak masz)
 };
 
 const NEED_DEFER = new Set(["addmoney", "removemoney", "leaderboard"]);
