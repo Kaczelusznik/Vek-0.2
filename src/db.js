@@ -81,6 +81,20 @@ async function init() {
     VALUES ('plague_level', 0, NOW())
     ON CONFLICT (key) DO NOTHING;
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rp_campaigns (
+      id               SERIAL PRIMARY KEY,
+      guild_id         TEXT NOT NULL,
+      channel_id       TEXT NOT NULL,
+      is_enabled       BOOLEAN NOT NULL DEFAULT FALSE,
+      interval_minutes INTEGER NOT NULL DEFAULT 5,
+      next_run_at      BIGINT NOT NULL,
+      title            TEXT NOT NULL DEFAULT 'Marcelina von Skulszczit',
+      created_at       BIGINT NOT NULL,
+      updated_at       BIGINT NOT NULL
+  );
+`);
 }
 
 if (SHOULD_INIT) {
@@ -426,6 +440,88 @@ async function setPlagueLevel(level) {
   return level;
 }
 
+/* =======================================================
+   RP CAMPAIGNS
+   Czas trzymamy w bigint jako Date.now() czyli ms
+======================================================= */
+
+async function ensureRpCampaign({ guildId, channelId, intervalMinutes = 5, title = "Marcelina von Skulszczit" }) {
+  const now = Date.now();
+
+  await pool.query(
+    `
+    INSERT INTO rp_campaigns (guild_id, channel_id, is_enabled, interval_minutes, next_run_at, title, created_at, updated_at)
+    VALUES ($1, $2, TRUE, $3, $4, $5, $6, $6)
+    ON CONFLICT (id) DO NOTHING
+  `,
+    [guildId, channelId, intervalMinutes, now, title, now]
+  );
+
+  const res = await pool.query(
+    `
+    SELECT *
+    FROM rp_campaigns
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+  `,
+    [guildId, channelId]
+  );
+
+  if (res.rowCount) return res.rows[0];
+
+  await pool.query(
+    `
+    INSERT INTO rp_campaigns (guild_id, channel_id, is_enabled, interval_minutes, next_run_at, title, created_at, updated_at)
+    VALUES ($1, $2, TRUE, $3, $4, $5, $6, $6)
+  `,
+    [guildId, channelId, intervalMinutes, now, title, now]
+  );
+
+  const res2 = await pool.query(
+    `
+    SELECT *
+    FROM rp_campaigns
+    WHERE guild_id = $1 AND channel_id = $2
+    LIMIT 1
+  `,
+    [guildId, channelId]
+  );
+
+  return res2.rows[0];
+}
+
+async function getDueRpCampaigns() {
+  const now = Date.now();
+  const res = await pool.query(
+    `
+    SELECT *
+    FROM rp_campaigns
+    WHERE is_enabled = TRUE
+      AND next_run_at <= $1
+    ORDER BY next_run_at ASC
+  `,
+    [now]
+  );
+  return res.rows;
+}
+
+async function markRpCampaignRan(id, intervalMinutes) {
+  const now = Date.now();
+  const next = now + Number(intervalMinutes) * 60 * 1000;
+
+  await pool.query(
+    `
+    UPDATE rp_campaigns
+    SET next_run_at = $2,
+        updated_at = $3
+    WHERE id = $1
+  `,
+    [id, next, now]
+  );
+
+  return { next_run_at: next };
+}
+
 module.exports = {
   getProfile,
 
@@ -445,4 +541,8 @@ module.exports = {
 
   getPlagueLevel,
   setPlagueLevel,
+
+  ensureRpCampaign,
+  getDueRpCampaigns,
+  markRpCampaignRan,
 };
