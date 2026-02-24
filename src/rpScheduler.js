@@ -9,51 +9,102 @@ const {
   ensureRpMemory,
   getRpMemory,
   appendRpMemory,
+  getOpenRpScene,
+  createRpScene,
+  closeRpScene,
+  getWinnerOption,
 } = require("./db");
 
-function makeMarcelinaMessage(title, sceneNo, memory) {
-  const now = new Date().toLocaleString("pl-PL");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
-  const kronika = memory
-    ? `**Kronika:**\n> ${memory.split("\n").slice(-3).join("\n> ")}\n\n`
-    : "";
+function buildOptions() {
+  return [
+    { key: "1", label: "Wejść cicho boczną bramą" },
+    { key: "2", label: "Wezwać straż i wejść oficjalnie" },
+    { key: "3", label: "Obejść mur i szukać śladu w terenie" },
+  ];
+}
 
+function buildSceneText(title, sceneNo, memory) {
+  const kronika = memory ? `**Kronika:**\n> ${memory.split("\n").slice(-3).join("\n> ")}\n\n` : "";
   return (
     `**[VEK] ${title}**\n` +
     `**Scena ${sceneNo}**\n\n` +
     kronika +
-    `Cicho mówisz pod nosem "Potwór". Rozkaz Króla Anastazji nie zostawia miejsca na wahanie.\n` +
-    `Marcelina von Skulszczit zaciska palce na paskach ekwipunku i rusza dalej. ${now}`
+    `Marcelina von Skulszczit dociera do punktu misji. Na murach widać świeże ślady szarpnięć.\n\n` +
+    `Co robicie?`
+  );
+}
+
+function buildButtons(sceneId, options) {
+  const row = new ActionRowBuilder();
+  for (const opt of options) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`rpvote:${sceneId}:${opt.key}`)
+        .setLabel(`${opt.key}. ${opt.label}`)
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+  return [row];
+}
+
+async function closePreviousSceneIfAny(campaign) {
+  const open = await getOpenRpScene(campaign.guild_id, campaign.channel_id);
+  if (!open) return;
+
+  const options = typeof open.options_json === "string" ? JSON.parse(open.options_json) : open.options_json;
+  const winnerKey = await getWinnerOption(open.id, options);
+
+  const winnerText = winnerKey
+    ? options.find((o) => String(o.key) === String(winnerKey))?.label || winnerKey
+    : "Brak głosów";
+
+  await closeRpScene(open.id, winnerKey || "none");
+
+  await appendRpMemory(
+    campaign.guild_id,
+    campaign.channel_id,
+    `Wynik głosowania (Scena ${open.scene_no}): ${winnerKey || "—"} (${winnerText}).`
   );
 }
 
 async function sendToCampaign(client, campaign) {
-  // 1) anty duble i brak spamu: najpierw rezerwujemy kolejny termin
+  // anty duble: rezerwuj termin zanim wyślesz
   const moved = await markRpCampaignRan(campaign.id, campaign.interval_minutes);
   if (!moved || moved.ok === false) return;
 
-  // 2) zapewnij stan i pamięć
   await ensureRpState(campaign.guild_id, campaign.channel_id);
   await ensureRpMemory(campaign.guild_id, campaign.channel_id);
 
+  // zamknij poprzednią scenę (jeśli była) i zapisz wynik
+  await closePreviousSceneIfAny(campaign);
+
   const st = await getRpState(campaign.guild_id, campaign.channel_id);
   const sceneNo = Number(st.scene_no) || 1;
-
   const memory = await getRpMemory(campaign.guild_id, campaign.channel_id);
 
-  // 3) wysyłka
   const channel = await client.channels.fetch(campaign.channel_id).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  const content = makeMarcelinaMessage(campaign.title, sceneNo, memory);
-  await channel.send({ content });
+  const options = buildOptions();
+  const text = buildSceneText(campaign.title, sceneNo, memory);
 
-  // 4) aktualizacja pamięci i sceny
-  await appendRpMemory(
-    campaign.guild_id,
-    campaign.channel_id,
-    `Scena ${sceneNo}: Marcelina idzie dalej z rozkazem Anastazji, coraz bliżej celu.`
-  );
+  // wyślij najpierw wiadomość bez przycisków, żeby mieć message id
+  const msg = await channel.send({ content: text });
+
+  // zapisz scenę do DB
+  const scene = await createRpScene({
+    guildId: campaign.guild_id,
+    channelId: campaign.channel_id,
+    sceneNo,
+    text,
+    options,
+    messageId: msg.id,
+  });
+
+  // edytuj wiadomość i dodaj przyciski
+  await msg.edit({ content: text, components: buildButtons(scene.id, options) });
 
   await bumpRpScene(campaign.guild_id, campaign.channel_id);
 }
@@ -88,10 +139,7 @@ async function startRpScheduler(client) {
   await ensureRpState(guildId, channelId);
   await ensureRpMemory(guildId, channelId);
 
-  // od razu spróbuj wysłać, jeśli next_run_at jest due
   await tick(client);
-
-  // potem sprawdzaj często, ale wysyłaj tylko gdy due
   setInterval(() => tick(client), 30 * 1000);
   console.log("[RP] Scheduler aktywny, sprawdza co 30 sekund.");
 }

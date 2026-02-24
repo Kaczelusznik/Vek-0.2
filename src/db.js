@@ -635,6 +635,108 @@ async function appendRpMemory(guildId, channelId, line) {
   return trimmed;
 }
 
+/* =======================================================
+   RP SCENES + VOTES (głosowanie większością)
+   Czas w sekundach (int4), options_json jako JSON.
+======================================================= */
+function nowSec() {
+  return Math.floor(Date.now() / 1000);
+}
+
+async function getOpenRpScene(guildId, channelId) {
+  const res = await pool.query(
+    `
+    SELECT *
+    FROM rp_scenes
+    WHERE guild_id = $1 AND channel_id = $2 AND status = 'OPEN'
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [guildId, channelId]
+  );
+  return res.rowCount ? res.rows[0] : null;
+}
+
+async function createRpScene({ guildId, channelId, sceneNo, text, options, messageId }) {
+  const t = nowSec();
+  const res = await pool.query(
+    `
+    INSERT INTO rp_scenes
+      (guild_id, channel_id, scene_no, message_id, text, options_json, status, winner_key, created_at, closed_at)
+    VALUES
+      ($1, $2, $3, $4, $5, $6::json, 'OPEN', NULL, $7, NULL)
+    RETURNING *
+    `,
+    [guildId, channelId, sceneNo, messageId, text, JSON.stringify(options), t]
+  );
+  return res.rows[0];
+}
+
+async function closeRpScene(sceneId, winnerKey) {
+  const t = nowSec();
+  await pool.query(
+    `
+    UPDATE rp_scenes
+    SET status = 'CLOSED',
+        winner_key = $2,
+        closed_at = $3
+    WHERE id = $1
+    `,
+    [sceneId, winnerKey, t]
+  );
+}
+
+async function upsertRpVote(sceneId, userId, optionKey) {
+  const t = nowSec();
+
+  // bez UNIQUE w tabeli robimy: UPDATE -> jeśli 0 wierszy, to INSERT
+  const upd = await pool.query(
+    `
+    UPDATE rp_votes
+    SET option_key = $3,
+        voted_at = $4
+    WHERE scene_id = $1 AND user_id = $2
+    `,
+    [sceneId, userId, optionKey, t]
+  );
+
+  if (upd.rowCount > 0) return;
+
+  await pool.query(
+    `
+    INSERT INTO rp_votes (scene_id, user_id, option_key, voted_at)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [sceneId, userId, optionKey, t]
+  );
+}
+
+async function countRpVotes(sceneId) {
+  const res = await pool.query(
+    `
+    SELECT option_key, COUNT(*)::int AS cnt
+    FROM rp_votes
+    WHERE scene_id = $1
+    GROUP BY option_key
+    ORDER BY cnt DESC, option_key ASC
+    `,
+    [sceneId]
+  );
+  return res.rows; // [{ option_key, cnt }]
+}
+
+async function getWinnerOption(sceneId, options) {
+  const counts = await countRpVotes(sceneId);
+  if (!counts.length) return null;
+
+  // winner = najwyższa liczba głosów, remis -> pierwszy po sort (cnt desc, key asc)
+  const winnerKey = String(counts[0].option_key);
+
+  // upewnij się, że key istnieje w opcjach
+  const keys = new Set(options.map((o) => String(o.key)));
+  return keys.has(winnerKey) ? winnerKey : null;
+}
+
 module.exports = {
   getProfile,
 
@@ -666,4 +768,11 @@ module.exports = {
   ensureRpMemory,
   getRpMemory,
   appendRpMemory,
+
+  getOpenRpScene,
+  createRpScene,
+  closeRpScene,
+  upsertRpVote,
+  countRpVotes,
+  getWinnerOption,
 };

@@ -1,4 +1,35 @@
 // src/events/interactionCreate.js
+
+const { upsertRpVote } = require("../db");
+
+module.exports = async (interaction) => {
+  try {
+    if (interaction.isButton()) {
+      const id = interaction.customId || "";
+      if (id.startsWith("rpvote:")) {
+        const [, sceneIdRaw, optionKey] = id.split(":");
+        const sceneId = Number(sceneIdRaw);
+
+        if (!Number.isInteger(sceneId) || !optionKey) {
+          return interaction.reply({ content: "Błędny głos.", ephemeral: true });
+        }
+
+        await upsertRpVote(sceneId, interaction.user.id, optionKey);
+        return interaction.reply({ content: `Oddano głos: ${optionKey}`, ephemeral: true });
+      }
+    }
+
+    // tu zostawiasz swoją obecną obsługę komend slash
+  } catch (e) {
+    console.error("interactionCreate error:", e);
+    if (!interaction.replied && !interaction.deferred) {
+      try {
+        await interaction.reply({ content: "Wystąpił błąd.", ephemeral: true });
+      } catch {}
+    }
+  }
+};
+
 const NEED_DEFER = new Set(["addmoney", "removemoney", "leaderboard"]);
 
 module.exports = async (interaction, client) => {
