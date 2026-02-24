@@ -1,3 +1,4 @@
+// src/db.js
 const { Pool } = require("pg");
 
 const SHOULD_INIT = process.env.DB_INIT !== "0";
@@ -12,20 +13,52 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+/* =======================================================
+   HELPERS
+======================================================= */
+function parseAmount2(input) {
+  const n = typeof input === "string" ? Number(input.replace(",", ".")) : Number(input);
+
+  if (!Number.isFinite(n)) {
+    throw new Error("Kwota musi być liczbą.");
+  }
+
+  if (n <= 0) {
+    throw new Error("Kwota musi być > 0.");
+  }
+
+  const rounded = Math.round(n * 100) / 100;
+
+  // zabezpieczenie przed wartościami typu 0.0000001 po konwersji
+  if (!(rounded > 0)) {
+    throw new Error("Kwota musi być > 0.");
+  }
+
+  return {
+    num: rounded,
+    str: rounded.toFixed(2),
+  };
+}
+
 async function init() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS economy (
-      guild_id   TEXT NOT NULL,
-      user_id    TEXT NOT NULL,
-      balance    INTEGER NOT NULL DEFAULT 0,
-      level      INTEGER NOT NULL DEFAULT 1,
-      exp        INTEGER NOT NULL DEFAULT 0,
-      created_at DATE NOT NULL DEFAULT NOW(),
-      updated_at DATE NOT NULL DEFAULT NOW(),
+      guild_id        TEXT NOT NULL,
+      user_id         TEXT NOT NULL,
+      balance         INTEGER NOT NULL DEFAULT 0,
+      crystal_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+      level           INTEGER NOT NULL DEFAULT 1,
+      exp             INTEGER NOT NULL DEFAULT 0,
+      created_at      DATE NOT NULL DEFAULT NOW(),
+      updated_at      DATE NOT NULL DEFAULT NOW(),
       PRIMARY KEY (guild_id, user_id)
     );
   `);
 
+  await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS balance INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(
+    `ALTER TABLE economy ADD COLUMN IF NOT EXISTS crystal_balance NUMERIC(12,2) NOT NULL DEFAULT 0;`
+  );
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1;`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS exp INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE economy ADD COLUMN IF NOT EXISTS created_at DATE NOT NULL DEFAULT NOW();`);
@@ -62,7 +95,7 @@ if (SHOULD_INIT) {
 async function getProfile(guildId, userId) {
   const res = await pool.query(
     `
-    SELECT balance, level, exp, created_at, updated_at
+    SELECT balance, crystal_balance, level, exp, created_at, updated_at
     FROM economy
     WHERE guild_id = $1 AND user_id = $2
   `,
@@ -72,6 +105,7 @@ async function getProfile(guildId, userId) {
   if (!res.rows[0]) {
     return {
       balance: 0,
+      crystal_balance: "0.00",
       level: 1,
       exp: 0,
       created_at: null,
@@ -138,6 +172,59 @@ async function removeMoney(guildId, userId, amount, { allowNegative = false } = 
 }
 
 /* =======================================================
+   CRYSTALS
+======================================================= */
+async function getCrystalBalance(guildId, userId) {
+  const profile = await getProfile(guildId, userId);
+  const raw = profile.crystal_balance ?? "0.00";
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function addCrystal(guildId, userId, amount) {
+  const { str } = parseAmount2(amount);
+
+  await pool.query(
+    `
+    INSERT INTO economy (guild_id, user_id, crystal_balance)
+    VALUES ($1, $2, $3::numeric)
+    ON CONFLICT (guild_id, user_id)
+    DO UPDATE SET
+      crystal_balance = economy.crystal_balance + EXCLUDED.crystal_balance,
+      updated_at = NOW()
+  `,
+    [guildId, userId, str]
+  );
+
+  return getCrystalBalance(guildId, userId);
+}
+
+async function removeCrystal(guildId, userId, amount, { allowNegative = false } = {}) {
+  const { num, str } = parseAmount2(amount);
+
+  const current = await getCrystalBalance(guildId, userId);
+  const nextNum = Math.round((current - num) * 100) / 100;
+
+  if (!allowNegative && nextNum < 0) {
+    return { ok: false, current, next: current };
+  }
+
+  await pool.query(
+    `
+    INSERT INTO economy (guild_id, user_id, crystal_balance)
+    VALUES ($1, $2, $3::numeric)
+    ON CONFLICT (guild_id, user_id)
+    DO UPDATE SET
+      crystal_balance = $3::numeric,
+      updated_at = NOW()
+  `,
+    [guildId, userId, nextNum.toFixed(2)]
+  );
+
+  return { ok: true, current, next: nextNum };
+}
+
+/* =======================================================
    TRANSFER
 ======================================================= */
 async function transferBalance(guildId, fromId, toId, amount) {
@@ -149,7 +236,6 @@ async function transferBalance(guildId, fromId, toId, amount) {
   try {
     await client.query("BEGIN");
 
-    // Blokujemy wiersz nadawcy
     const fromRes = await client.query(
       `
       SELECT balance
@@ -166,7 +252,6 @@ async function transferBalance(guildId, fromId, toId, amount) {
       throw new Error("insufficient");
     }
 
-    // Upewnij się że odbiorca istnieje
     await client.query(
       `
       INSERT INTO economy (guild_id, user_id, balance)
@@ -176,7 +261,6 @@ async function transferBalance(guildId, fromId, toId, amount) {
       [guildId, toId]
     );
 
-    // Odejmij nadawcy
     const updatedFrom = await client.query(
       `
       UPDATE economy
@@ -188,7 +272,6 @@ async function transferBalance(guildId, fromId, toId, amount) {
       [guildId, fromId, amount]
     );
 
-    // Dodaj odbiorcy
     await client.query(
       `
       UPDATE economy
@@ -220,6 +303,21 @@ async function topBalances(guildId, limit = 10) {
     FROM economy
     WHERE guild_id = $1
     ORDER BY balance DESC
+    LIMIT $2
+  `,
+    [guildId, limit]
+  );
+
+  return res.rows;
+}
+
+async function topCrystalBalances(guildId, limit = 10) {
+  const res = await pool.query(
+    `
+    SELECT user_id, crystal_balance
+    FROM economy
+    WHERE guild_id = $1
+    ORDER BY crystal_balance DESC
     LIMIT $2
   `,
     [guildId, limit]
@@ -272,7 +370,7 @@ async function setLevel(guildId, userId, level) {
 }
 
 /* =======================================================
-   SERVER STATE — PLAGA
+   SERVER STATE  PLAGA
 ======================================================= */
 async function getPlagueLevel() {
   const res = await pool.query(
@@ -330,13 +428,21 @@ async function setPlagueLevel(level) {
 
 module.exports = {
   getProfile,
+
   getBalance,
   addMoney,
   removeMoney,
   transferBalance,
   topBalances,
+
+  getCrystalBalance,
+  addCrystal,
+  removeCrystal,
+  topCrystalBalances,
+
   addExp,
   setLevel,
+
   getPlagueLevel,
   setPlagueLevel,
 };

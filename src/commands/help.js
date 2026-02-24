@@ -39,7 +39,10 @@ module.exports = {
             "• `/transfer user kwota` — przelew do innego gracza\n" +
             "• `/leaderboard` — ranking najbogatszych\n" +
             "• `/addmoney` — dodaj monety (admin/mod)\n" +
-            "• `/removemoney` — zabierz monety (admin/mod)",
+            "• `/removemoney` — zabierz monety (admin/mod)" +
+            "• `/crystalleaderboard` — ranking najbogatszych czarno-rynkowych\n" +
+            "• `/addcrystal` — dodaj kryształ (admin/mod)\n" +
+            "• `/removecrystal` — zabierz kryształ (admin/mod)",
           inline: false,
         },
         {
