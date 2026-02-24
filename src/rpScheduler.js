@@ -34,7 +34,7 @@ async function startRpScheduler(client) {
   const enabled = (process.env.RP_ENABLED ?? "1") !== "0";
   if (!enabled) return;
 
-  const guildId = process.env.RP_GUILD_ID;
+  const guildId = process.env.GUILD_ID;
   const channelId = process.env.RP_CHANNEL_ID;
 
   if (!guildId || !channelId) {
