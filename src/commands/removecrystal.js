@@ -9,6 +9,12 @@ const ALLOWED_ROLES = [
   "Imperator",
 ];
 
+function safeReply(interaction, payload) {
+  return interaction.deferred || interaction.replied
+    ? interaction.editReply(payload)
+    : interaction.reply(payload);
+}
+
 function parseCrystalAmount(input) {
   const raw = String(input ?? "").trim().replace(",", ".");
   const n = Number(raw);
@@ -41,19 +47,21 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member?.roles?.cache.some((r) => ALLOWED_ROLES.includes(r.name))) {
-      return interaction.editReply({ content: "Nie masz uprawnień." });
+      return safeReply(interaction, { content: "Nie masz uprawnień." });
     }
 
     try {
       const target = interaction.options.getUser("gracz", true);
+
       const amountStr = interaction.options.getString("kwota", true);
       const amountFixed = parseCrystalAmount(amountStr);
+
       const allowNegative = interaction.options.getBoolean("moze_ujemne") ?? false;
 
       const res = await removeCrystal(interaction.guildId, target.id, amountFixed, { allowNegative });
 
       if (!res.ok) {
-        return interaction.editReply({
+        return safeReply(interaction, {
           content: `${target} ma tylko **${Number(res.current).toFixed(
             2
           )}** <:krysztalwaluta:1475641863552630844>.`,
@@ -61,14 +69,14 @@ module.exports = {
         });
       }
 
-      return interaction.editReply({
-        content: `Zabrano **${amountFixed}** <:krysztalwaluta:1475641863552630844> ${target}. Saldo: **${Number(res.current).toFixed(
-          2
-        )} → ${Number(res.next).toFixed(2)}**`,
+      return safeReply(interaction, {
+        content: `Zabrano **${amountFixed}** <:krysztalwaluta:1475641863552630844> ${target}. Saldo: **${Number(
+          res.current
+        ).toFixed(2)} → ${Number(res.next).toFixed(2)}**`,
         allowedMentions: { users: [target.id] },
       });
     } catch (err) {
-      return interaction.editReply({ content: `Błąd: ${err.message}` });
+      return safeReply(interaction, { content: `Błąd: ${err.message}` });
     }
   },
 };

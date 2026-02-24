@@ -2,6 +2,12 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { topCrystalBalances } = require("../db");
 
+function safeReply(interaction, payload) {
+  return interaction.deferred || interaction.replied
+    ? interaction.editReply(payload)
+    : interaction.reply(payload);
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("crystalleaderboard")
@@ -32,9 +38,9 @@ module.exports = {
         .setFooter({ text: "Jo nie wiedzioł, że tok dobrze wom idzie" })
         .setTimestamp();
 
-      return interaction.editReply({ embeds: [embed] });
+      return safeReply(interaction, { embeds: [embed] });
     } catch (err) {
-      return interaction.editReply({ content: `Błąd: ${err.message}` });
+      return safeReply(interaction, { content: `Błąd: ${err.message}` });
     }
   },
 };

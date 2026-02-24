@@ -9,6 +9,12 @@ const ALLOWED_ROLES = [
   "Imperator",
 ];
 
+function safeReply(interaction, payload) {
+  return interaction.deferred || interaction.replied
+    ? interaction.editReply(payload)
+    : interaction.reply(payload);
+}
+
 function parseCrystalAmount(input) {
   const raw = String(input ?? "").trim().replace(",", ".");
   const n = Number(raw);
@@ -38,25 +44,26 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member?.roles?.cache.some((r) => ALLOWED_ROLES.includes(r.name))) {
-      return interaction.editReply({ content: "Nie masz uprawnień." });
+      return safeReply(interaction, { content: "Nie masz uprawnień." });
     }
 
     try {
       const target = interaction.options.getUser("gracz", true);
+
       const amountStr = interaction.options.getString("kwota", true);
       const amountFixed = parseCrystalAmount(amountStr);
       const amountNum = Number(amountFixed);
 
       const newBal = await addCrystal(interaction.guildId, target.id, amountFixed);
 
-      return interaction.editReply({
-        content: `Dodano **${amountFixed}** <:krysztalwaluta:1475641863552630844> dla ${target}. Saldo: **${(newBal - amountNum).toFixed(
-          2
-        )} → ${newBal.toFixed(2)}**`,
+      return safeReply(interaction, {
+        content: `Dodano **${amountFixed}** <:krysztalwaluta:1475641863552630844> dla ${target}. Saldo: **${(
+          newBal - amountNum
+        ).toFixed(2)} → ${newBal.toFixed(2)}**`,
         allowedMentions: { users: [target.id] },
       });
     } catch (err) {
-      return interaction.editReply({ content: `Błąd: ${err.message}` });
+      return safeReply(interaction, { content: `Błąd: ${err.message}` });
     }
   },
 };
